@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Test Location",
+    "address": "123 Main St, Norfolk, VA 23503",
+    "city": "Norfolk",
+    "google_maps_link": "http://maps.google.com/?q=test"
+  }
+]

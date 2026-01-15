@@ -1,0 +1,12 @@
+{
+  "name": "hampton-roads-community-board-map",
+  "version": "1.0.0",
+  "description": "Community board locations in Hampton Roads, Virginia",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "validate": "node scripts/validate.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

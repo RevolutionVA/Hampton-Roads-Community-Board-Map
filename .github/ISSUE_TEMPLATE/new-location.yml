@@ -1,0 +1,56 @@
+name: Submit New Location
+description: Add a new community board location to the map
+title: "[New Location]: "
+labels: ["new-location"]
+body:
+  - type: dropdown
+    id: city
+    attributes:
+      label: City
+      description: Which city is this location in?
+      options:
+        - Norfolk
+        - Virginia Beach
+        - Chesapeake
+        - Suffolk
+        - Portsmouth
+        - Hampton
+        - Newport News
+    validations:
+      required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: Location Name
+      description: Name of the business or place (e.g., "Kroger - Granby St" or "Ocean View Library")
+      placeholder: "Example Library"
+    validations:
+      required: true
+
+  - type: input
+    id: address
+    attributes:
+      label: Address
+      description: Full street address including city, state, and ZIP
+      placeholder: "123 Main St, Norfolk, VA 23510"
+    validations:
+      required: true
+
+  - type: input
+    id: google_maps_link
+    attributes:
+      label: Google Maps Link
+      description: Link to this location on Google Maps
+      placeholder: "https://maps.google.com/..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Where is the community board located? Any restrictions or tips?
+      placeholder: "Community board is by the bathrooms near the pharmacy"
+    validations:
+      required: false

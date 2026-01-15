@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Test Location",
+    "address": "123 Main St, Richmond, VA 23219",
+    "city": "Richmond",
+    "google_maps_link": "https://maps.google.com/?q=test"
+  }
+]
