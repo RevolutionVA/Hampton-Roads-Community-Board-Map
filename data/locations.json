@@ -5,5 +5,12 @@
     "city": "Norfolk",
     "google_maps_link": "https://maps.app.goo.gl/BBA84eUKjnMxXxVb8",
     "notes": "Allows fliers in the windows (Ghent area)"
+  },
+  {
+    "name": "Town Center Coldpressed",
+    "address": "168 Central Park Ave, Virginia Beach, VA 23462",
+    "city": "Virginia Beach",
+    "google_maps_link": "https://maps.app.goo.gl/QPpKZYKL4CdyJpCp8",
+    "notes": "There is a section inside the door with flyers and notices.  It's requested to contact `joe.trask@tccp.cafe` before putting material there."
   }
 ]
