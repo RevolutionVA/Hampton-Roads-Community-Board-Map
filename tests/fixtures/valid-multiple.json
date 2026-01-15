@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Ocean View Library",
+    "address": "123 Ocean View Ave, Norfolk, VA 23503",
+    "city": "Norfolk",
+    "google_maps_link": "https://maps.google.com/?q=Ocean+View+Library",
+    "notes": "Board is near the entrance"
+  },
+  {
+    "name": "Great Neck Recreation Center",
+    "address": "2521 Shorehaven Dr, Virginia Beach, VA 23454",
+    "city": "Virginia Beach",
+    "google_maps_link": "https://maps.google.com/?q=Great+Neck+Rec",
+    "notes": ""
+  },
+  {
+    "name": "Chesapeake Central Library",
+    "address": "298 Cedar Rd, Chesapeake, VA 23322",
+    "city": "Chesapeake",
+    "google_maps_link": "https://maps.google.com/?q=Chesapeake+Library"
+  }
+]
