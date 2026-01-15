@@ -1,0 +1,174 @@
+name: Create PR from New Location Issue
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  create-pr:
+    if: contains(github.event.issue.labels.*.name, 'new-location')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Parse issue and create PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueBody = context.payload.issue.body;
+            const issueNumber = context.payload.issue.number;
+            const issueTitle = context.payload.issue.title;
+
+            // Parse form fields from issue body
+            function parseField(body, fieldName) {
+              const regex = new RegExp(`### ${fieldName}\\s*\\n\\s*([^#]+?)(?=\\n###|$)`, 's');
+              const match = body.match(regex);
+              return match ? match[1].trim() : '';
+            }
+
+            const city = parseField(issueBody, 'City');
+            const name = parseField(issueBody, 'Location Name');
+            const address = parseField(issueBody, 'Address');
+            const googleMapsLink = parseField(issueBody, 'Google Maps Link');
+            const notes = parseField(issueBody, 'Notes') || '';
+
+            // Validate required fields
+            const missingFields = [];
+            if (!city) missingFields.push('City');
+            if (!name) missingFields.push('Location Name');
+            if (!address) missingFields.push('Address');
+            if (!googleMapsLink) missingFields.push('Google Maps Link');
+
+            if (missingFields.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `❌ Missing required fields: ${missingFields.join(', ')}\n\nPlease edit the issue to include all required information.`
+              });
+              return;
+            }
+
+            // Validate city
+            const validCities = ['Norfolk', 'Virginia Beach', 'Chesapeake', 'Suffolk', 'Portsmouth', 'Hampton', 'Newport News'];
+            if (!validCities.includes(city)) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `❌ Invalid city: "${city}"\n\nValid cities are: ${validCities.join(', ')}`
+              });
+              return;
+            }
+
+            // Create new location object
+            const newLocation = {
+              name: name,
+              address: address,
+              city: city,
+              google_maps_link: googleMapsLink,
+              notes: notes
+            };
+
+            // Read and update locations.json
+            const fs = require('fs');
+            const locationsPath = 'data/locations.json';
+            const locations = JSON.parse(fs.readFileSync(locationsPath, 'utf8'));
+            locations.push(newLocation);
+
+            // Sort by city then name
+            locations.sort((a, b) => {
+              if (a.city !== b.city) return a.city.localeCompare(b.city);
+              return a.name.localeCompare(b.name);
+            });
+
+            const updatedJson = JSON.stringify(locations, null, 2) + '\n';
+
+            // Generate markdown table
+            let markdown = `# Community Board Locations\n\nPublic bulletin boards in Hampton Roads, Virginia where you can post community notices.\n\n`;
+            markdown += `| City | Name | Address | Map | Notes |\n`;
+            markdown += `|------|------|---------|-----|-------|\n`;
+
+            for (const loc of locations) {
+              const notesCell = loc.notes || '';
+              markdown += `| ${loc.city} | ${loc.name} | ${loc.address} | [Map](${loc.google_maps_link}) | ${notesCell} |\n`;
+            }
+
+            // Create branch name
+            const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30);
+            const branchName = `add-location/${issueNumber}-${sanitizedName}`;
+
+            // Get default branch SHA
+            const { data: ref } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'heads/main'
+            });
+
+            // Create new branch
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/heads/${branchName}`,
+              sha: ref.object.sha
+            });
+
+            // Update locations.json
+            const { data: jsonFile } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: locationsPath,
+              ref: 'main'
+            });
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: locationsPath,
+              message: `Add location: ${name}`,
+              content: Buffer.from(updatedJson).toString('base64'),
+              branch: branchName,
+              sha: jsonFile.sha
+            });
+
+            // Update LOCATIONS.md
+            const { data: mdFile } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'LOCATIONS.md',
+              ref: branchName
+            });
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'LOCATIONS.md',
+              message: `Update locations table`,
+              content: Buffer.from(markdown).toString('base64'),
+              branch: branchName,
+              sha: mdFile.sha
+            });
+
+            // Create PR
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Add location: ${name} (${city})`,
+              head: branchName,
+              base: 'main',
+              body: `## New Location Submission\n\n- **Name:** ${name}\n- **City:** ${city}\n- **Address:** ${address}\n- **Google Maps:** ${googleMapsLink}\n- **Notes:** ${notes || 'N/A'}\n\nCloses #${issueNumber}`
+            });
+
+            // Comment on issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `✅ Created PR #${pr.number} to add this location.\n\nOnce reviewed and merged, this issue will be automatically closed.`
+            });
