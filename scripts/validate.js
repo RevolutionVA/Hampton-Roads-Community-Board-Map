@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { generateMarkdown } = require('./generate-markdown');
 
 const VALID_CITIES = [
   'Norfolk',
@@ -71,18 +72,33 @@ function validateLocations(locations) {
 }
 
 function validateMarkdownInSync(locations, markdownContent) {
-  const missing = [];
+  const expected = generateMarkdown(locations);
+  const normalize = (s) => s.replace(/\r\n/g, '\n').trimEnd();
+  const expectedNorm = normalize(expected);
+  const actualNorm = normalize(markdownContent);
 
-  for (const loc of locations) {
-    if (!markdownContent.includes(loc.name)) {
-      missing.push(loc.name);
+  if (expectedNorm === actualNorm) {
+    return { valid: true, errors: [] };
+  }
+
+  const expectedLines = expectedNorm.split('\n');
+  const actualLines = actualNorm.split('\n');
+  const errors = [];
+
+  const maxLen = Math.max(expectedLines.length, actualLines.length);
+  for (let i = 0; i < maxLen; i++) {
+    const exp = expectedLines[i];
+    const act = actualLines[i];
+    if (exp === undefined) {
+      errors.push(`Line ${i + 1}: unexpected extra line: "${act}"`);
+    } else if (act === undefined) {
+      errors.push(`Line ${i + 1}: missing expected line: "${exp}"`);
+    } else if (exp !== act) {
+      errors.push(`Line ${i + 1}: mismatch\n  expected: "${exp}"\n  actual:   "${act}"`);
     }
   }
 
-  return {
-    valid: missing.length === 0,
-    missing
-  };
+  return { valid: false, errors };
 }
 
 // CLI entry point
@@ -113,8 +129,9 @@ if (require.main === module) {
     const syncResult = validateMarkdownInSync(locations, mdContent);
 
     if (!syncResult.valid) {
-      console.error('❌ LOCATIONS.md is out of sync. Missing:\n');
-      syncResult.missing.forEach(n => console.error(`  - ${n}`));
+      console.error('❌ LOCATIONS.md is out of sync with locations.json:\n');
+      syncResult.errors.forEach(e => console.error(`  - ${e}`));
+      console.error('\nRun "npm run generate" to regenerate LOCATIONS.md');
       process.exit(1);
     }
   } catch (e) {
