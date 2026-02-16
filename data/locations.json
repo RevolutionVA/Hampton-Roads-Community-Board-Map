@@ -12,5 +12,19 @@
     "city": "Virginia Beach",
     "google_maps_link": "https://maps.app.goo.gl/QPpKZYKL4CdyJpCp8",
     "notes": "There is a section inside the door with flyers and notices.  It's requested to contact `joe.trask@tccp.cafe` before putting material there."
+  },
+  {
+    "name": "Regent University Library",
+    "address": "1000 Regent University Dr, Virginia Beach, VA 23464",
+    "city": "Virginia Beach",
+    "google_maps_link": "https://maps.app.goo.gl/TwiJYZZQB5h4mrLG6",
+    "notes": "Parking is in the rear of the building. Enter through the front door. Walk in and ring the bell for access. Guest Services will check your ID and direct you to the left, where Print Card Services is located. Staff will accept 7 flyers and post them around campus."
+  },
+  {
+    "name": "Kempsville Area Library",
+    "address": "832 Kempsville Rd, Virginia Beach, VA 23464",
+    "city": "Virginia Beach",
+    "google_maps_link": "https://maps.app.goo.gl/gQYfn8BtAkZVJSpx7",
+    "notes": "Enter through the front door. The librarian will post flyers on the community bulletin board as long as there is a date and location listed."
   }
 ]
