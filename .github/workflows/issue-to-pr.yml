@@ -90,15 +90,11 @@ jobs:
 
             const updatedJson = JSON.stringify(locations, null, 2) + '\n';
 
-            // Generate markdown table
-            let markdown = `# Community Board Locations\n\nPublic bulletin boards in Hampton Roads, Virginia where you can post community notices.\n\n`;
-            markdown += `| City | Name | Address | Map | Notes |\n`;
-            markdown += `|------|------|---------|-----|-------|\n`;
-
-            for (const loc of locations) {
-              const notesCell = loc.notes || '';
-              markdown += `| ${loc.city} | ${loc.name} | ${loc.address} | [Map](${loc.google_maps_link}) | ${notesCell} |\n`;
-            }
+            // Generate markdown table using shared module
+            const { generateMarkdown } = require(
+              require('path').join(process.env.GITHUB_WORKSPACE, 'scripts', 'generate-markdown')
+            );
+            const markdown = generateMarkdown(locations);
 
             // Create branch name
             const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30);
