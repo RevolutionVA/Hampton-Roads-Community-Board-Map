@@ -4,7 +4,8 @@
   "description": "Community board locations in Hampton Roads, Virginia",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "validate": "node scripts/validate.js"
+    "validate": "node scripts/validate.js",
+    "generate": "node scripts/generate-markdown.js"
   },
   "engines": {
     "node": ">=18.0.0"

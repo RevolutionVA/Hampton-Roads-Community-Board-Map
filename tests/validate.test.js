@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { validateLocations, validateMarkdownInSync, VALID_CITIES } = require('../scripts/validate');
+const { generateMarkdown } = require('../scripts/generate-markdown');
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 
@@ -131,31 +132,121 @@ describe('validateLocations', () => {
   });
 });
 
-describe('validateMarkdownInSync', () => {
-  it('passes when all locations are in markdown', () => {
-    const locations = [
-      { name: 'Library A' },
-      { name: 'Library B' }
-    ];
-    const markdown = '| Library A | ... |\n| Library B | ... |';
-    const result = validateMarkdownInSync(locations, markdown);
-    assert.strictEqual(result.valid, true);
-    assert.strictEqual(result.missing.length, 0);
+describe('generateMarkdown', () => {
+  it('generates header and table structure', () => {
+    const md = generateMarkdown([]);
+    assert.ok(md.startsWith('# Community Board Locations'));
+    assert.ok(md.includes('| City | Name | Address | Map | Notes |'));
+    assert.ok(md.includes('|------|------|---------|-----|-------|'));
   });
 
-  it('fails when location is missing from markdown', () => {
+  it('generates rows for locations', () => {
+    const locations = [{
+      name: 'Test Library',
+      address: '123 Main St, Norfolk, VA 23510',
+      city: 'Norfolk',
+      google_maps_link: 'https://maps.app.goo.gl/abc123',
+      notes: 'Front entrance'
+    }];
+    const md = generateMarkdown(locations);
+    assert.ok(md.includes('| Norfolk | Test Library | 123 Main St, Norfolk, VA 23510 | [Map](https://maps.app.goo.gl/abc123) | Front entrance |'));
+  });
+
+  it('handles missing notes with empty cell', () => {
+    const locations = [{
+      name: 'Test',
+      address: '123 Main St',
+      city: 'Norfolk',
+      google_maps_link: 'https://maps.google.com'
+    }];
+    const md = generateMarkdown(locations);
+    assert.ok(md.includes('|  |'), 'should have empty notes cell');
+  });
+
+  it('preserves location order', () => {
     const locations = [
-      { name: 'Library A' },
-      { name: 'Library B' }
+      { name: 'Zebra Place', address: '1 Z St', city: 'Norfolk', google_maps_link: 'https://maps.google.com/z' },
+      { name: 'Alpha Place', address: '1 A St', city: 'Hampton', google_maps_link: 'https://maps.google.com/a' }
     ];
-    const markdown = '| Library A | ... |';
+    const md = generateMarkdown(locations);
+    const zebraIndex = md.indexOf('Zebra Place');
+    const alphaIndex = md.indexOf('Alpha Place');
+    assert.ok(zebraIndex < alphaIndex, 'should preserve input order');
+  });
+});
+
+describe('validateMarkdownInSync', () => {
+  it('passes when markdown matches exactly', () => {
+    const locations = [{
+      name: 'Test Library',
+      address: '123 Main St, Norfolk, VA 23510',
+      city: 'Norfolk',
+      google_maps_link: 'https://maps.app.goo.gl/abc123',
+      notes: 'Front entrance'
+    }];
+    const markdown = generateMarkdown(locations);
+    const result = validateMarkdownInSync(locations, markdown);
+    assert.strictEqual(result.valid, true);
+    assert.strictEqual(result.errors.length, 0);
+  });
+
+  it('fails when address is wrong', () => {
+    const locations = [{
+      name: 'Test Library',
+      address: '123 Main St, Norfolk, VA 23510',
+      city: 'Norfolk',
+      google_maps_link: 'https://maps.app.goo.gl/abc123',
+      notes: 'Front entrance'
+    }];
+    let markdown = generateMarkdown(locations);
+    markdown = markdown.replace('123 Main St', '456 Oak Ave');
     const result = validateMarkdownInSync(locations, markdown);
     assert.strictEqual(result.valid, false);
-    assert.ok(result.missing.includes('Library B'));
+    assert.ok(result.errors.some(e => e.includes('mismatch')));
+  });
+
+  it('fails when a row is missing', () => {
+    const locations = [
+      { name: 'Place A', address: '1 A St', city: 'Norfolk', google_maps_link: 'https://maps.google.com/a', notes: '' },
+      { name: 'Place B', address: '2 B St', city: 'Hampton', google_maps_link: 'https://maps.google.com/b', notes: '' }
+    ];
+    // Generate markdown with only the first location
+    const markdown = generateMarkdown([locations[0]]);
+    const result = validateMarkdownInSync(locations, markdown);
+    assert.strictEqual(result.valid, false);
+    assert.ok(result.errors.length > 0);
+  });
+
+  it('fails when there is an extra row', () => {
+    const locations = [
+      { name: 'Place A', address: '1 A St', city: 'Norfolk', google_maps_link: 'https://maps.google.com/a', notes: '' }
+    ];
+    // Generate markdown with an extra location
+    const markdown = generateMarkdown([
+      ...locations,
+      { name: 'Place B', address: '2 B St', city: 'Hampton', google_maps_link: 'https://maps.google.com/b', notes: '' }
+    ]);
+    const result = validateMarkdownInSync(locations, markdown);
+    assert.strictEqual(result.valid, false);
+    assert.ok(result.errors.length > 0);
+  });
+
+  it('handles CRLF normalization', () => {
+    const locations = [{
+      name: 'Test',
+      address: '123 Main St',
+      city: 'Norfolk',
+      google_maps_link: 'https://maps.google.com',
+      notes: 'Test'
+    }];
+    const markdown = generateMarkdown(locations).replace(/\n/g, '\r\n');
+    const result = validateMarkdownInSync(locations, markdown);
+    assert.strictEqual(result.valid, true);
   });
 
   it('passes with empty locations', () => {
-    const result = validateMarkdownInSync([], '# Locations');
+    const markdown = generateMarkdown([]);
+    const result = validateMarkdownInSync([], markdown);
     assert.strictEqual(result.valid, true);
   });
 });
