@@ -26,25 +26,31 @@ When you submit, a pull request is automatically created for review.
 
 ## Contributing
 
+The easiest way is the [submission form](../../issues/new?template=new-location.yml) above — no coding required.
+
+Prefer a pull request? Each location is one small Markdown file, so adding a location means adding one file:
+
 1. Fork this repository
-2. Add locations to `data/locations.json`
-3. Update `LOCATIONS.md` with matching table rows
-4. Run `npm test` to validate
-5. Submit a pull request
+2. Create `data/locations/<city>/<location-name>.md` (kebab-case, e.g. `data/locations/norfolk/ocean-view-library.md`)
+3. Submit a pull request
+
+That's it — `LOCATIONS.md` is auto-generated, so don't edit it by hand. You can optionally run `npm test` and `npm run validate` locally, but CI checks everything for you.
 
 ## Data Format
 
-Each location in `data/locations.json`:
+Each location file looks like this:
 
-```json
-{
-  "name": "Location Name",
-  "address": "Full address with ZIP",
-  "city": "Norfolk",
-  "google_maps_link": "https://maps.google.com/...",
-  "notes": "Where to find the board"
-}
+```markdown
+---
+name: Ocean View Library
+address: 123 Main St, Norfolk, VA 23510
+google_maps_link: https://maps.google.com/...
+---
+
+Where to find the board, any restrictions or tips.
 ```
+
+The city comes from the folder name (`norfolk`, `virginia-beach`, `newport-news`, ...). The section below the `---` lines is free-form notes and is optional.
 
 ## License
 

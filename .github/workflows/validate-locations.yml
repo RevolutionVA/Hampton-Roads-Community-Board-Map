@@ -3,14 +3,14 @@ name: Validate Locations Data
 on:
   pull_request:
     paths:
-      - 'data/locations.json'
+      - 'data/locations/**'
       - 'LOCATIONS.md'
       - 'scripts/**'
       - 'tests/**'
   push:
     branches: [main]
     paths:
-      - 'data/locations.json'
+      - 'data/locations/**'
       - 'LOCATIONS.md'
       - 'scripts/**'
       - 'tests/**'

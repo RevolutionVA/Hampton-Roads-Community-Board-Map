@@ -3,7 +3,7 @@ name: Sync LOCATIONS.md
 on:
   pull_request:
     paths:
-      - 'data/locations.json'
+      - 'data/locations/**'
 
 jobs:
   sync:
@@ -41,5 +41,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add LOCATIONS.md
-          git commit -m "Auto-regenerate LOCATIONS.md from locations.json"
+          git commit -m "Auto-regenerate LOCATIONS.md from data/locations/"
           git push
