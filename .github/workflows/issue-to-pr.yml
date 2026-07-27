@@ -17,13 +17,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Parse issue and create PR
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
+            const path = require('path');
             const issueBody = context.payload.issue.body;
             const issueNumber = context.payload.issue.number;
-            const issueTitle = context.payload.issue.title;
 
             // Parse form fields from issue body
             function parseField(body, fieldName) {
@@ -36,7 +42,17 @@ jobs:
             const name = parseField(issueBody, 'Location Name');
             const address = parseField(issueBody, 'Address');
             const googleMapsLink = parseField(issueBody, 'Google Maps Link');
-            const notes = parseField(issueBody, 'Notes') || '';
+            let notes = parseField(issueBody, 'Notes') || '';
+            if (notes === '_No response_') notes = '';
+
+            async function comment(body) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body
+              });
+            }
 
             // Validate required fields
             const missingFields = [];
@@ -46,125 +62,71 @@ jobs:
             if (!googleMapsLink) missingFields.push('Google Maps Link');
 
             if (missingFields.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body: `❌ Missing required fields: ${missingFields.join(', ')}\n\nPlease edit the issue to include all required information.`
-              });
+              await comment(`❌ Missing required fields: ${missingFields.join(', ')}\n\nPlease edit the issue to include all required information.`);
               return;
             }
+
+            const scriptsDir = path.join(process.env.GITHUB_WORKSPACE, 'scripts');
+            const { cityToSlug, slugify, buildLocationFile, loadLocations, VALID_CITIES } = require(path.join(scriptsDir, 'locations'));
+            const { updateReadme } = require(path.join(scriptsDir, 'generate-readme'));
 
             // Validate city
-            const validCities = ['Norfolk', 'Virginia Beach', 'Chesapeake', 'Suffolk', 'Portsmouth', 'Hampton', 'Newport News'];
-            if (!validCities.includes(city)) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body: `❌ Invalid city: "${city}"\n\nValid cities are: ${validCities.join(', ')}`
-              });
+            const citySlug = cityToSlug(city);
+            if (!citySlug) {
+              await comment(`❌ Invalid city: "${city}"\n\nValid cities are: ${VALID_CITIES.join(', ')}`);
               return;
             }
 
-            // Create new location object
-            const newLocation = {
-              name: name,
-              address: address,
-              city: city,
-              google_maps_link: googleMapsLink,
-              notes: notes
-            };
+            // Write the new location file
+            const fileSlug = slugify(name);
+            if (!fileSlug) {
+              await comment(`❌ Could not build a filename from the location name "${name}". Please use a name with letters or numbers.`);
+              return;
+            }
 
-            // Read and update locations.json
-            const fs = require('fs');
-            const locationsPath = 'data/locations.json';
-            const locations = JSON.parse(fs.readFileSync(locationsPath, 'utf8'));
-            locations.push(newLocation);
+            const locationPath = `data/locations/${citySlug}/${fileSlug}.md`;
+            if (fs.existsSync(locationPath)) {
+              await comment(`❌ A location file already exists for this name: \`${locationPath}\`\n\nIf this is a different location, please adjust the name to distinguish it.`);
+              return;
+            }
 
-            // Sort by city then name
-            locations.sort((a, b) => {
-              if (a.city !== b.city) return a.city.localeCompare(b.city);
-              return a.name.localeCompare(b.name);
-            });
+            fs.mkdirSync(path.dirname(locationPath), { recursive: true });
+            fs.writeFileSync(locationPath, buildLocationFile({ name, address, google_maps_link: googleMapsLink, notes }), 'utf8');
 
-            const updatedJson = JSON.stringify(locations, null, 2) + '\n';
+            // Regenerate the README locations table from all location files
+            fs.writeFileSync('README.md', updateReadme(fs.readFileSync('README.md', 'utf8'), loadLocations()), 'utf8');
 
-            // Generate markdown table using shared module
-            const { generateMarkdown } = require(
-              require('path').join(process.env.GITHUB_WORKSPACE, 'scripts', 'generate-markdown')
-            );
-            const markdown = generateMarkdown(locations);
-
-            // Create branch name
-            const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30);
+            // Commit to a branch and push
+            const sanitizedName = fileSlug.substring(0, 30);
             const branchName = `add-location/${issueNumber}-${sanitizedName}`;
 
-            // Get default branch SHA
-            const { data: ref } = await github.rest.git.getRef({
+            await exec.exec('git', ['config', 'user.name', 'github-actions[bot]']);
+            await exec.exec('git', ['config', 'user.email', 'github-actions[bot]@users.noreply.github.com']);
+            await exec.exec('git', ['checkout', '-b', branchName]);
+            await exec.exec('git', ['add', locationPath, 'README.md']);
+            await exec.exec('git', ['commit', '-m', `Add location: ${name} (${city})`]);
+            await exec.exec('git', ['push', '--force', 'origin', branchName]);
+
+            // Create PR unless one already exists for this branch (issue edits re-run this job)
+            const { data: existing } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'heads/main'
+              head: `${context.repo.owner}:${branchName}`,
+              state: 'open'
             });
 
-            // Create new branch
-            await github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `refs/heads/${branchName}`,
-              sha: ref.object.sha
-            });
+            if (existing.length > 0) {
+              await comment(`✅ Updated PR #${existing[0].number} with the latest details from this issue.`);
+              return;
+            }
 
-            // Update locations.json
-            const { data: jsonFile } = await github.rest.repos.getContent({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: locationsPath,
-              ref: 'main'
-            });
-
-            await github.rest.repos.createOrUpdateFileContents({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: locationsPath,
-              message: `Add location: ${name}`,
-              content: Buffer.from(updatedJson).toString('base64'),
-              branch: branchName,
-              sha: jsonFile.sha
-            });
-
-            // Update LOCATIONS.md
-            const { data: mdFile } = await github.rest.repos.getContent({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: 'LOCATIONS.md',
-              ref: branchName
-            });
-
-            await github.rest.repos.createOrUpdateFileContents({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: 'LOCATIONS.md',
-              message: `Update locations table`,
-              content: Buffer.from(markdown).toString('base64'),
-              branch: branchName,
-              sha: mdFile.sha
-            });
-
-            // Create PR
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Add location: ${name} (${city})`,
               head: branchName,
               base: 'main',
-              body: `## New Location Submission\n\n- **Name:** ${name}\n- **City:** ${city}\n- **Address:** ${address}\n- **Google Maps:** ${googleMapsLink}\n- **Notes:** ${notes || 'N/A'}\n\nCloses #${issueNumber}`
+              body: `## New Location Submission\n\n- **Name:** ${name}\n- **City:** ${city}\n- **Address:** ${address}\n- **Google Maps:** ${googleMapsLink}\n- **Notes:** ${notes || 'N/A'}\n\nAdds \`${locationPath}\`\n\nCloses #${issueNumber}`
             });
 
-            // Comment on issue
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              body: `✅ Created PR #${pr.number} to add this location.\n\nOnce reviewed and merged, this issue will be automatically closed.`
-            });
+            await comment(`✅ Created PR #${pr.number} to add this location.\n\nOnce reviewed and merged, this issue will be automatically closed.`);

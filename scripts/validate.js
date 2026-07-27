@@ -1,61 +1,66 @@
 const fs = require('fs');
-const path = require('path');
-const { generateMarkdown } = require('./generate-markdown');
+const { generateTable, extractTable, START_MARKER, END_MARKER, README_PATH } = require('./generate-readme');
+const {
+  CITY_SLUGS,
+  VALID_CITIES,
+  REQUIRED_FIELDS,
+  LOCATIONS_DIR,
+  parseLocationFile,
+  walkLocationFiles
+} = require('./locations');
 
-const VALID_CITIES = [
-  'Norfolk',
-  'Virginia Beach',
-  'Chesapeake',
-  'Suffolk',
-  'Portsmouth',
-  'Hampton',
-  'Newport News'
-];
+const VALID_FIELDS = [...REQUIRED_FIELDS];
 
-const VALID_FIELDS = ['name', 'address', 'city', 'google_maps_link', 'notes'];
+const FILENAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/;
 
-function validateLocations(locations) {
+// Validates a single location file. Returns { errors, location } where
+// location is null when the file could not be parsed into one.
+function validateLocationFile(citySlug, filename, content) {
+  const prefix = `data/locations/${citySlug}/${filename}`;
   const errors = [];
 
-  if (!Array.isArray(locations)) {
-    return { valid: false, errors: ['locations.json must be an array'] };
+  if (!(citySlug in CITY_SLUGS)) {
+    errors.push(`${prefix}: unknown city folder '${citySlug}'. Must be one of: ${Object.keys(CITY_SLUGS).join(', ')}`);
   }
 
-  locations.forEach((loc, index) => {
-    const prefix = `Location ${index + 1} (${loc.name || 'unnamed'})`;
+  if (!FILENAME_PATTERN.test(filename)) {
+    errors.push(`${prefix}: filename must be kebab-case and end in .md (e.g. ocean-view-library.md)`);
+  }
 
-    // Required fields
-    if (!loc.name || typeof loc.name !== 'string') {
-      errors.push(`${prefix}: missing or invalid 'name'`);
-    }
-    if (!loc.address || typeof loc.address !== 'string') {
-      errors.push(`${prefix}: missing or invalid 'address'`);
-    }
-    if (!loc.city || typeof loc.city !== 'string') {
-      errors.push(`${prefix}: missing or invalid 'city'`);
-    } else if (!VALID_CITIES.includes(loc.city)) {
-      errors.push(`${prefix}: invalid city '${loc.city}'. Must be one of: ${VALID_CITIES.join(', ')}`);
-    }
-    if (!loc.google_maps_link || typeof loc.google_maps_link !== 'string') {
-      errors.push(`${prefix}: missing or invalid 'google_maps_link'`);
-    } else if (!loc.google_maps_link.startsWith('https://')) {
-      errors.push(`${prefix}: google_maps_link must start with https://`);
-    }
+  const { fields, notes, errors: parseErrors } = parseLocationFile(content);
+  parseErrors.forEach(e => errors.push(`${prefix}: ${e}`));
 
-    // Notes is optional but must be string if present
-    if (loc.notes !== undefined && typeof loc.notes !== 'string') {
-      errors.push(`${prefix}: 'notes' must be a string`);
+  for (const field of REQUIRED_FIELDS) {
+    if (!fields[field]) {
+      errors.push(`${prefix}: missing required frontmatter field '${field}'`);
     }
+  }
 
-    // Check for unexpected fields
-    Object.keys(loc).forEach(key => {
-      if (!VALID_FIELDS.includes(key)) {
-        errors.push(`${prefix}: unexpected field '${key}'`);
-      }
-    });
+  if (fields.google_maps_link && !fields.google_maps_link.startsWith('https://')) {
+    errors.push(`${prefix}: google_maps_link must start with https://`);
+  }
+
+  Object.keys(fields).forEach(key => {
+    if (!VALID_FIELDS.includes(key)) {
+      errors.push(`${prefix}: unexpected frontmatter field '${key}' (city comes from the folder name, notes go below the frontmatter)`);
+    }
   });
 
-  // Check for duplicates
+  const location = {
+    name: fields.name || '',
+    address: fields.address || '',
+    city: CITY_SLUGS[citySlug] || citySlug,
+    google_maps_link: fields.google_maps_link || '',
+    notes,
+    file: prefix
+  };
+
+  return { errors, location };
+}
+
+// Cross-file checks: duplicate name+address pairs.
+function validateLocationSet(locations) {
+  const errors = [];
   const seen = new Set();
   locations.forEach(loc => {
     const key = `${loc.name}|${loc.address}`.toLowerCase();
@@ -64,18 +69,43 @@ function validateLocations(locations) {
     }
     seen.add(key);
   });
-
-  return {
-    valid: errors.length === 0,
-    errors
-  };
+  return { valid: errors.length === 0, errors };
 }
 
-function validateMarkdownInSync(locations, markdownContent) {
-  const expected = generateMarkdown(locations);
-  const normalize = (s) => s.replace(/\r\n/g, '\n').trimEnd();
-  const expectedNorm = normalize(expected);
-  const actualNorm = normalize(markdownContent);
+// Validates the whole data/locations tree.
+function validateLocationsDir(dir = LOCATIONS_DIR) {
+  const errors = [];
+  const locations = [];
+
+  for (const file of walkLocationFiles(dir)) {
+    if (file.citySlug === null) {
+      errors.push(`${file.relPath}: stray file (locations must live in a city folder like data/locations/norfolk/)`);
+      continue;
+    }
+    const result = validateLocationFile(file.citySlug, file.filename, file.content);
+    errors.push(...result.errors);
+    locations.push(result.location);
+  }
+
+  locations.sort((a, b) => {
+    if (a.city !== b.city) return a.city.localeCompare(b.city);
+    return a.name.localeCompare(b.name);
+  });
+
+  errors.push(...validateLocationSet(locations).errors);
+
+  return { valid: errors.length === 0, errors, locations };
+}
+
+function validateReadmeInSync(locations, readmeContent) {
+  const actualTable = extractTable(readmeContent);
+  if (actualTable === null) {
+    return { valid: false, errors: [`README is missing the ${START_MARKER} / ${END_MARKER} markers`] };
+  }
+
+  const normalize = (s) => s.replace(/\r\n/g, '\n').trimEnd().trim();
+  const expectedNorm = normalize(generateTable(locations));
+  const actualNorm = normalize(actualTable);
 
   if (expectedNorm === actualNorm) {
     return { valid: true, errors: [] };
@@ -103,19 +133,10 @@ function validateMarkdownInSync(locations, markdownContent) {
 
 // CLI entry point
 if (require.main === module) {
-  const locationsPath = process.argv[2] || path.join(__dirname, '..', 'data', 'locations.json');
-  const mdPath = process.argv[3] || path.join(__dirname, '..', 'LOCATIONS.md');
+  const locationsDir = process.argv[2] || LOCATIONS_DIR;
+  const readmePath = process.argv[3] || README_PATH;
 
-  let locations;
-  try {
-    const content = fs.readFileSync(locationsPath, 'utf8');
-    locations = JSON.parse(content);
-  } catch (e) {
-    console.error(`❌ Failed to read/parse ${locationsPath}: ${e.message}`);
-    process.exit(1);
-  }
-
-  const result = validateLocations(locations);
+  const result = validateLocationsDir(locationsDir);
 
   if (!result.valid) {
     console.error('❌ Validation failed:\n');
@@ -123,29 +144,31 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  // Check markdown sync
+  // Check the README's locations table is in sync
   try {
-    const mdContent = fs.readFileSync(mdPath, 'utf8');
-    const syncResult = validateMarkdownInSync(locations, mdContent);
+    const readmeContent = fs.readFileSync(readmePath, 'utf8');
+    const syncResult = validateReadmeInSync(result.locations, readmeContent);
 
     if (!syncResult.valid) {
-      console.error('❌ LOCATIONS.md is out of sync with locations.json:\n');
+      console.error('❌ README.md locations table is out of sync with data/locations/:\n');
       syncResult.errors.forEach(e => console.error(`  - ${e}`));
-      console.error('\nRun "npm run generate" to regenerate LOCATIONS.md');
+      console.error('\nRun "npm run generate" to regenerate the README table');
       process.exit(1);
     }
   } catch (e) {
-    console.error(`❌ Failed to read ${mdPath}: ${e.message}`);
+    console.error(`❌ Failed to read ${readmePath}: ${e.message}`);
     process.exit(1);
   }
 
-  console.log(`✅ Validated ${locations.length} locations successfully`);
+  console.log(`✅ Validated ${result.locations.length} locations successfully`);
   process.exit(0);
 }
 
 module.exports = {
-  validateLocations,
-  validateMarkdownInSync,
+  validateLocationFile,
+  validateLocationSet,
+  validateLocationsDir,
+  validateReadmeInSync,
   VALID_CITIES,
   VALID_FIELDS
 };

@@ -1,9 +1,9 @@
-name: Sync LOCATIONS.md
+name: Sync README locations table
 
 on:
   pull_request:
     paths:
-      - 'data/locations.json'
+      - 'data/locations/**'
 
 jobs:
   sync:
@@ -23,23 +23,23 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Regenerate LOCATIONS.md
-        run: node scripts/generate-markdown.js
+      - name: Regenerate README locations table
+        run: node scripts/generate-readme.js
 
       - name: Check for changes
         id: diff
         run: |
-          if git diff --quiet LOCATIONS.md; then
+          if git diff --quiet README.md; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit updated LOCATIONS.md
+      - name: Commit updated README.md
         if: steps.diff.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add LOCATIONS.md
-          git commit -m "Auto-regenerate LOCATIONS.md from locations.json"
+          git add README.md
+          git commit -m "Auto-regenerate README locations table from data/locations/"
           git push
