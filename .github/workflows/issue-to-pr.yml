@@ -68,7 +68,7 @@ jobs:
 
             const scriptsDir = path.join(process.env.GITHUB_WORKSPACE, 'scripts');
             const { cityToSlug, slugify, buildLocationFile, loadLocations, VALID_CITIES } = require(path.join(scriptsDir, 'locations'));
-            const { generateMarkdown } = require(path.join(scriptsDir, 'generate-markdown'));
+            const { updateReadme } = require(path.join(scriptsDir, 'generate-readme'));
 
             // Validate city
             const citySlug = cityToSlug(city);
@@ -93,8 +93,8 @@ jobs:
             fs.mkdirSync(path.dirname(locationPath), { recursive: true });
             fs.writeFileSync(locationPath, buildLocationFile({ name, address, google_maps_link: googleMapsLink, notes }), 'utf8');
 
-            // Regenerate LOCATIONS.md from all location files
-            fs.writeFileSync('LOCATIONS.md', generateMarkdown(loadLocations()), 'utf8');
+            // Regenerate the README locations table from all location files
+            fs.writeFileSync('README.md', updateReadme(fs.readFileSync('README.md', 'utf8'), loadLocations()), 'utf8');
 
             // Commit to a branch and push
             const sanitizedName = fileSlug.substring(0, 30);
@@ -103,7 +103,7 @@ jobs:
             await exec.exec('git', ['config', 'user.name', 'github-actions[bot]']);
             await exec.exec('git', ['config', 'user.email', 'github-actions[bot]@users.noreply.github.com']);
             await exec.exec('git', ['checkout', '-b', branchName]);
-            await exec.exec('git', ['add', locationPath, 'LOCATIONS.md']);
+            await exec.exec('git', ['add', locationPath, 'README.md']);
             await exec.exec('git', ['commit', '-m', `Add location: ${name} (${city})`]);
             await exec.exec('git', ['push', '--force', 'origin', branchName]);
 

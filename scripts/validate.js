@@ -1,6 +1,5 @@
 const fs = require('fs');
-const path = require('path');
-const { generateMarkdown } = require('./generate-markdown');
+const { generateTable, extractTable, START_MARKER, END_MARKER, README_PATH } = require('./generate-readme');
 const {
   CITY_SLUGS,
   VALID_CITIES,
@@ -98,11 +97,15 @@ function validateLocationsDir(dir = LOCATIONS_DIR) {
   return { valid: errors.length === 0, errors, locations };
 }
 
-function validateMarkdownInSync(locations, markdownContent) {
-  const expected = generateMarkdown(locations);
-  const normalize = (s) => s.replace(/\r\n/g, '\n').trimEnd();
-  const expectedNorm = normalize(expected);
-  const actualNorm = normalize(markdownContent);
+function validateReadmeInSync(locations, readmeContent) {
+  const actualTable = extractTable(readmeContent);
+  if (actualTable === null) {
+    return { valid: false, errors: [`README is missing the ${START_MARKER} / ${END_MARKER} markers`] };
+  }
+
+  const normalize = (s) => s.replace(/\r\n/g, '\n').trimEnd().trim();
+  const expectedNorm = normalize(generateTable(locations));
+  const actualNorm = normalize(actualTable);
 
   if (expectedNorm === actualNorm) {
     return { valid: true, errors: [] };
@@ -131,7 +134,7 @@ function validateMarkdownInSync(locations, markdownContent) {
 // CLI entry point
 if (require.main === module) {
   const locationsDir = process.argv[2] || LOCATIONS_DIR;
-  const mdPath = process.argv[3] || path.join(__dirname, '..', 'LOCATIONS.md');
+  const readmePath = process.argv[3] || README_PATH;
 
   const result = validateLocationsDir(locationsDir);
 
@@ -141,19 +144,19 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  // Check markdown sync
+  // Check the README's locations table is in sync
   try {
-    const mdContent = fs.readFileSync(mdPath, 'utf8');
-    const syncResult = validateMarkdownInSync(result.locations, mdContent);
+    const readmeContent = fs.readFileSync(readmePath, 'utf8');
+    const syncResult = validateReadmeInSync(result.locations, readmeContent);
 
     if (!syncResult.valid) {
-      console.error('❌ LOCATIONS.md is out of sync with data/locations/:\n');
+      console.error('❌ README.md locations table is out of sync with data/locations/:\n');
       syncResult.errors.forEach(e => console.error(`  - ${e}`));
-      console.error('\nRun "npm run generate" to regenerate LOCATIONS.md');
+      console.error('\nRun "npm run generate" to regenerate the README table');
       process.exit(1);
     }
   } catch (e) {
-    console.error(`❌ Failed to read ${mdPath}: ${e.message}`);
+    console.error(`❌ Failed to read ${readmePath}: ${e.message}`);
     process.exit(1);
   }
 
@@ -165,7 +168,7 @@ module.exports = {
   validateLocationFile,
   validateLocationSet,
   validateLocationsDir,
-  validateMarkdownInSync,
+  validateReadmeInSync,
   VALID_CITIES,
   VALID_FIELDS
 };

@@ -6,10 +6,10 @@ const {
   validateLocationFile,
   validateLocationSet,
   validateLocationsDir,
-  validateMarkdownInSync,
+  validateReadmeInSync,
   VALID_CITIES
 } = require('../scripts/validate');
-const { generateMarkdown } = require('../scripts/generate-markdown');
+const { generateTable, updateReadme, extractTable, START_MARKER, END_MARKER } = require('../scripts/generate-readme');
 const { parseLocationFile, buildLocationFile, loadLocations, slugify, cityToSlug } = require('../scripts/locations');
 
 const fixturesDir = path.join(__dirname, 'fixtures');
@@ -213,10 +213,9 @@ describe('loadLocations', () => {
   });
 });
 
-describe('generateMarkdown', () => {
-  it('generates header, generated-file notice, and table structure', () => {
-    const md = generateMarkdown([]);
-    assert.ok(md.startsWith('# Community Board Locations'));
+describe('generateTable', () => {
+  it('generates generated-file notice and table structure', () => {
+    const md = generateTable([]);
     assert.ok(md.includes('auto-generated'));
     assert.ok(md.includes('| City | Name | Address | Map | Notes |'));
     assert.ok(md.includes('|------|------|---------|-----|-------|'));
@@ -231,7 +230,7 @@ describe('generateMarkdown', () => {
       notes: 'Front entrance',
       file: 'data/locations/norfolk/test-library.md'
     }];
-    const md = generateMarkdown(locations);
+    const md = generateTable(locations);
     assert.ok(md.includes('| Norfolk | [Test Library](data/locations/norfolk/test-library.md) | 123 Main St, Norfolk, VA 23510 | [Map](https://maps.app.goo.gl/abc123) | Front entrance |'));
   });
 
@@ -244,7 +243,7 @@ describe('generateMarkdown', () => {
       notes: 'Line one.\n\nLine two.',
       file: 'data/locations/norfolk/test.md'
     }];
-    const md = generateMarkdown(locations);
+    const md = generateTable(locations);
     assert.ok(md.includes('| Line one. Line two. |'));
   });
 
@@ -256,7 +255,7 @@ describe('generateMarkdown', () => {
       google_maps_link: 'https://maps.google.com',
       file: 'data/locations/norfolk/test.md'
     }];
-    const md = generateMarkdown(locations);
+    const md = generateTable(locations);
     assert.ok(md.includes('|  |'), 'should have empty notes cell');
   });
 
@@ -265,12 +264,13 @@ describe('generateMarkdown', () => {
       { name: 'Zebra Place', address: '1 Z St', city: 'Norfolk', google_maps_link: 'https://maps.google.com/z' },
       { name: 'Alpha Place', address: '1 A St', city: 'Hampton', google_maps_link: 'https://maps.google.com/a' }
     ];
-    const md = generateMarkdown(locations);
+    const md = generateTable(locations);
     assert.ok(md.indexOf('Zebra Place') < md.indexOf('Alpha Place'), 'should preserve input order');
   });
 });
 
-describe('validateMarkdownInSync', () => {
+describe('updateReadme and extractTable', () => {
+  const README = `# Title\n\nIntro text.\n\n## Locations\n\n${START_MARKER}\nold content\n${END_MARKER}\n\n## License\n\nPublic domain.\n`;
   const location = {
     name: 'Test Library',
     address: '123 Main St, Norfolk, VA 23510',
@@ -280,44 +280,91 @@ describe('validateMarkdownInSync', () => {
     file: 'data/locations/norfolk/test-library.md'
   };
 
-  it('passes when markdown matches exactly', () => {
-    const markdown = generateMarkdown([location]);
-    const result = validateMarkdownInSync([location], markdown);
+  it('replaces only the marked section', () => {
+    const updated = updateReadme(README, [location]);
+    assert.ok(updated.includes('Intro text.'));
+    assert.ok(updated.includes('Public domain.'));
+    assert.ok(updated.includes('[Test Library](data/locations/norfolk/test-library.md)'));
+    assert.ok(!updated.includes('old content'));
+  });
+
+  it('is idempotent', () => {
+    const once = updateReadme(README, [location]);
+    const twice = updateReadme(once, [location]);
+    assert.strictEqual(once, twice);
+  });
+
+  it('throws when markers are missing', () => {
+    assert.throws(() => updateReadme('# No markers here\n', [location]), /markers/);
+  });
+
+  it('extractTable returns the generated block', () => {
+    const updated = updateReadme(README, [location]);
+    const block = extractTable(updated);
+    assert.ok(block.includes('| City | Name | Address | Map | Notes |'));
+  });
+
+  it('extractTable returns null when markers are missing', () => {
+    assert.strictEqual(extractTable('# No markers\n'), null);
+  });
+});
+
+describe('validateReadmeInSync', () => {
+  const location = {
+    name: 'Test Library',
+    address: '123 Main St, Norfolk, VA 23510',
+    city: 'Norfolk',
+    google_maps_link: 'https://maps.app.goo.gl/abc123',
+    notes: 'Front entrance',
+    file: 'data/locations/norfolk/test-library.md'
+  };
+  const emptyReadme = `# Title\n\n${START_MARKER}\n${END_MARKER}\n`;
+
+  function readmeFor(locations) {
+    return updateReadme(emptyReadme, locations);
+  }
+
+  it('passes when the README table matches exactly', () => {
+    const result = validateReadmeInSync([location], readmeFor([location]));
     assert.strictEqual(result.valid, true);
     assert.strictEqual(result.errors.length, 0);
   });
 
+  it('fails when markers are missing', () => {
+    const result = validateReadmeInSync([location], '# No markers\n');
+    assert.strictEqual(result.valid, false);
+    assert.ok(result.errors.some(e => e.includes('markers')));
+  });
+
   it('fails when address is wrong', () => {
-    const markdown = generateMarkdown([location]).replace('123 Main St', '456 Oak Ave');
-    const result = validateMarkdownInSync([location], markdown);
+    const readme = readmeFor([location]).replace('123 Main St', '456 Oak Ave');
+    const result = validateReadmeInSync([location], readme);
     assert.strictEqual(result.valid, false);
     assert.ok(result.errors.some(e => e.includes('mismatch')));
   });
 
   it('fails when a row is missing', () => {
     const other = { ...location, name: 'Place B', address: '2 B St', file: 'data/locations/hampton/place-b.md', city: 'Hampton' };
-    const markdown = generateMarkdown([location]);
-    const result = validateMarkdownInSync([location, other], markdown);
+    const result = validateReadmeInSync([location, other], readmeFor([location]));
     assert.strictEqual(result.valid, false);
     assert.ok(result.errors.length > 0);
   });
 
   it('fails when there is an extra row', () => {
     const other = { ...location, name: 'Place B', address: '2 B St', file: 'data/locations/hampton/place-b.md', city: 'Hampton' };
-    const markdown = generateMarkdown([location, other]);
-    const result = validateMarkdownInSync([location], markdown);
+    const result = validateReadmeInSync([location], readmeFor([location, other]));
     assert.strictEqual(result.valid, false);
     assert.ok(result.errors.length > 0);
   });
 
   it('handles CRLF normalization', () => {
-    const markdown = generateMarkdown([location]).replace(/\n/g, '\r\n');
-    const result = validateMarkdownInSync([location], markdown);
+    const readme = readmeFor([location]).replace(/\n/g, '\r\n');
+    const result = validateReadmeInSync([location], readme);
     assert.strictEqual(result.valid, true);
   });
 
   it('passes with empty locations', () => {
-    const result = validateMarkdownInSync([], generateMarkdown([]));
+    const result = validateReadmeInSync([], readmeFor([]));
     assert.strictEqual(result.valid, true);
   });
 });

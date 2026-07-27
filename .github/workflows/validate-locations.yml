@@ -4,14 +4,14 @@ on:
   pull_request:
     paths:
       - 'data/locations/**'
-      - 'LOCATIONS.md'
+      - 'README.md'
       - 'scripts/**'
       - 'tests/**'
   push:
     branches: [main]
     paths:
       - 'data/locations/**'
-      - 'LOCATIONS.md'
+      - 'README.md'
       - 'scripts/**'
       - 'tests/**'
 
