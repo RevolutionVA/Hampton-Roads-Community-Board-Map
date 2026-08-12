@@ -1,22 +1,23 @@
-name: Sync README locations table
+name: Check README locations table
 
 on:
   pull_request:
     paths:
       - 'data/locations/**'
+      - 'README.md'
+      - 'scripts/generate-readme.js'
+      - 'scripts/locations.js'
+
+permissions:
+  contents: read
 
 jobs:
-  sync:
+  check:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout pull request
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -26,20 +27,9 @@ jobs:
       - name: Regenerate README locations table
         run: node scripts/generate-readme.js
 
-      - name: Check for changes
-        id: diff
+      - name: Verify README is up to date
         run: |
-          if git diff --quiet README.md; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+          if ! git diff --exit-code -- README.md; then
+            echo "::error file=README.md::The locations table is out of date. Run 'node scripts/generate-readme.js', commit README.md, and push the update."
+            exit 1
           fi
-
-      - name: Commit updated README.md
-        if: steps.diff.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "Auto-regenerate README locations table from data/locations/"
-          git push
