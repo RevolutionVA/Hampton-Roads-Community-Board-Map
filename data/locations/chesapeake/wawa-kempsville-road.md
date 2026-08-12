@@ -1,7 +1,7 @@
 ---
-name: Wawa
-address: 170 Kempsville Road, Chesapeake, VA 23320
-google_maps_link: https://maps.app.goo.gl/3Z1Rj9dJcRc9qX3Y6
+name: Wawa - Kempsville Road
+address: Kempsville Road, Chesapeake, VA 23320
+google_maps_link: https://www.google.com/maps/search/?api=1&query=Wawa%20-%20Kempsville%20Road%2C%20Kempsville%20Road%2C%20Chesapeake%2C%20VA%2023320
 ---
 
-board confirmed in person, push pins required!
+Community board confirmed in person. Bring push pins.
