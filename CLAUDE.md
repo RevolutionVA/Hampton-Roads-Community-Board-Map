@@ -51,10 +51,11 @@ Triggers when an issue with "new-location" label is opened/edited:
 5. Creates PR linking to the issue (or force-updates the existing PR branch on issue edits)
 6. Comments on issue with PR link
 
-### README sync (`sync-readme.yml`)
-Runs on PRs that modify `data/locations/**`: regenerates the README locations table and commits it to the PR branch if it changed.
+### README check (`sync-readme.yml`)
+Runs on PRs that modify location data, README, or its generator scripts. It regenerates the locations table in a read-only checkout and fails with a remediation command if the committed README is stale. It does not push into contributor branches, so it works safely for PRs from forks.
 
 ### Validation (`validate-locations.yml`)
 Runs on PRs that modify location files, README, scripts, or tests:
 - Runs test suite (`npm test`)
 - Validates `data/locations/` and README table sync (`npm run validate`)
+
