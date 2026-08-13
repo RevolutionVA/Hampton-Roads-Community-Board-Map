@@ -5,3 +5,5 @@ google_maps_link: https://www.openstreetmap.org/way/1545452520
 ---
 
 Community board confirmed in person. Located near the bathroom. Bring push pins.
+
+![Project Seed Coffee community bulletin board covered with local flyers and business cards](/RevolutionVA/Hampton-Roads-Community-Board-Map/raw/main/images/project-seed-coffee-community-board.jpg)
