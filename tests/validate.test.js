@@ -247,18 +247,35 @@ describe('generateTable', () => {
     assert.ok(md.includes('| Line one. Line two. |'));
   });
 
-  it('rebases relative note images for the README location', () => {
+  it('removes note images entirely while retaining Project Seed-style text', () => {
+    const locations = [{
+      name: 'Project Seed Coffee',
+      address: '1 A St',
+      city: 'Norfolk',
+      google_maps_link: 'https://x',
+      notes: 'Community board confirmed in person. Located near the bathroom. Bring push pins.\n\n![Community board photo](../../../images/board.jpg)',
+      file: 'data/locations/norfolk/test.md'
+    }];
+    const md = generateTable(locations);
+    assert.ok(md.includes('| Community board confirmed in person. Located near the bathroom. Bring push pins. |'));
+    assert.ok(!md.includes('!['));
+    assert.ok(!md.includes('../../../images/board.jpg'));
+    assert.ok(!md.includes('Community board photo'));
+  });
+
+  it('preserves ordinary Markdown links while removing images', () => {
     const locations = [{
       name: 'Test',
       address: '1 A St',
       city: 'Norfolk',
       google_maps_link: 'https://x',
-      notes: 'Board. ![Board](../../../images/board.jpg)',
+      notes: 'See [posting rules](https://example.com/rules). ![Rules sign](../../../images/rules.jpg)',
       file: 'data/locations/norfolk/test.md'
     }];
     const md = generateTable(locations);
-    assert.ok(md.includes('Board. ![Board](images/board.jpg)'));
-    assert.ok(!md.includes('../../../images/board.jpg'));
+    assert.ok(md.includes('See [posting rules](https://example.com/rules).'));
+    assert.ok(!md.includes('Rules sign'));
+    assert.ok(!md.includes('../../../images/rules.jpg'));
   });
 
   it('handles missing notes with empty cell', () => {
@@ -303,9 +320,15 @@ describe('updateReadme and extractTable', () => {
   });
 
   it('is idempotent', () => {
-    const once = updateReadme(README, [location]);
-    const twice = updateReadme(once, [location]);
+    const locationWithImage = {
+      ...location,
+      notes: 'Front entrance. [Details](https://example.com).\n\n![Entrance photo](../../../images/entrance.jpg)'
+    };
+    const once = updateReadme(README, [locationWithImage]);
+    const twice = updateReadme(once, [locationWithImage]);
     assert.strictEqual(once, twice);
+    assert.ok(once.includes('[Details](https://example.com)'));
+    assert.ok(!once.includes('!['));
   });
 
   it('throws when markers are missing', () => {
