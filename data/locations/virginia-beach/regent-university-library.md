@@ -1,6 +1,13 @@
 ---
 name: Regent University Library
 address: 1000 Regent University Dr, Virginia Beach, VA 23464
+city: Virginia Beach
+area: centerville
+lat: 36.8013507
+lng: -76.19694659999999
+category: library
+board_type: other
+status: verified
 google_maps_link: https://maps.app.goo.gl/TwiJYZZQB5h4mrLG6
 ---
 

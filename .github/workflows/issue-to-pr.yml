@@ -42,6 +42,8 @@ jobs:
             const name = parseField(issueBody, 'Location Name');
             const address = parseField(issueBody, 'Address');
             const googleMapsLink = parseField(issueBody, 'Google Maps Link');
+            const area = parseField(issueBody, 'Area');
+            const category = parseField(issueBody, 'Category');
             let notes = parseField(issueBody, 'Notes') || '';
             if (notes === '_No response_') notes = '';
 
@@ -60,6 +62,8 @@ jobs:
             if (!name) missingFields.push('Location Name');
             if (!address) missingFields.push('Address');
             if (!googleMapsLink) missingFields.push('Google Maps Link');
+            if (!area) missingFields.push('Area');
+            if (!category) missingFields.push('Category');
 
             if (missingFields.length > 0) {
               await comment(`❌ Missing required fields: ${missingFields.join(', ')}\n\nPlease edit the issue to include all required information.`);
@@ -91,7 +95,13 @@ jobs:
             }
 
             fs.mkdirSync(path.dirname(locationPath), { recursive: true });
-            fs.writeFileSync(locationPath, buildLocationFile({ name, address, google_maps_link: googleMapsLink, notes }), 'utf8');
+            // Verification is deliberately human-only. Automated intake always starts here.
+            fs.writeFileSync(locationPath, buildLocationFile({
+              name, address, city, area, category,
+              status: 'needs-verification',
+              google_maps_link: googleMapsLink,
+              notes
+            }), 'utf8');
 
             // Regenerate the README locations table from all location files
             fs.writeFileSync('README.md', updateReadme(fs.readFileSync('README.md', 'utf8'), loadLocations()), 'utf8');

@@ -1,6 +1,11 @@
 ---
 name: Phoebus Branch Library
 address: 1 S Mallory St, Hampton, VA 23663
+city: Hampton
+area: phoebus
+category: library
+board_type: bulletin-board
+status: verified
 google_maps_link: https://www.google.com/maps/search/?api=1&query=Phoebus%20Branch%20Library%2C%201%20S%20Mallory%20St%2C%20Hampton%2C%20VA%2023663
 ---
 

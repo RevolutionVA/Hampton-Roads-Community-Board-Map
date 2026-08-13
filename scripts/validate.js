@@ -4,12 +4,15 @@ const {
   CITY_SLUGS,
   VALID_CITIES,
   REQUIRED_FIELDS,
+  VALID_FIELDS,
+  VALID_AREAS,
+  VALID_CATEGORIES,
+  VALID_BOARD_TYPES,
+  VALID_STATUSES,
   LOCATIONS_DIR,
   parseLocationFile,
   walkLocationFiles
 } = require('./locations');
-
-const VALID_FIELDS = [...REQUIRED_FIELDS];
 
 const FILENAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/;
 
@@ -39,17 +42,51 @@ function validateLocationFile(citySlug, filename, content) {
   if (fields.google_maps_link && !fields.google_maps_link.startsWith('https://')) {
     errors.push(`${prefix}: google_maps_link must start with https://`);
   }
+  if (fields.google_maps_link && fields.google_maps_link.startsWith('https://')) {
+    try {
+      const hostname = new URL(fields.google_maps_link).hostname.toLowerCase();
+      const isGoogleHost = hostname === 'google.com' || hostname.endsWith('.google.com') || hostname === 'maps.app.goo.gl';
+      if (!isGoogleHost) errors.push(`${prefix}: google_maps_link must point to google.com or maps.app.goo.gl`);
+    } catch {
+      errors.push(`${prefix}: google_maps_link must be a valid URL`);
+    }
+  }
+
+  if (fields.city && fields.city !== CITY_SLUGS[citySlug]) {
+    errors.push(`${prefix}: city '${fields.city}' does not match folder '${citySlug}'`);
+  }
+  if (fields.area && !VALID_AREAS.includes(fields.area)) errors.push(`${prefix}: invalid area '${fields.area}'`);
+  if (fields.category && !VALID_CATEGORIES.includes(fields.category)) errors.push(`${prefix}: invalid category '${fields.category}'`);
+  if (fields.board_type && !VALID_BOARD_TYPES.includes(fields.board_type)) errors.push(`${prefix}: invalid board_type '${fields.board_type}'`);
+  if (fields.status && !VALID_STATUSES.includes(fields.status)) errors.push(`${prefix}: invalid status '${fields.status}'`);
+
+  if (Boolean(fields.lat) !== Boolean(fields.lng)) errors.push(`${prefix}: lat and lng must be provided together`);
+  if (fields.lat) {
+    const lat = Number(fields.lat);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) errors.push(`${prefix}: lat must be a number between -90 and 90`);
+  }
+  if (fields.lng) {
+    const lng = Number(fields.lng);
+    if (!Number.isFinite(lng) || lng < -180 || lng > 180) errors.push(`${prefix}: lng must be a number between -180 and 180`);
+  }
+  if (fields.verified_date) {
+    const match = fields.verified_date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const date = match && new Date(`${fields.verified_date}T00:00:00Z`);
+    if (!match || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== fields.verified_date) {
+      errors.push(`${prefix}: verified_date must be a real date in YYYY-MM-DD format`);
+    }
+  }
 
   Object.keys(fields).forEach(key => {
     if (!VALID_FIELDS.includes(key)) {
-      errors.push(`${prefix}: unexpected frontmatter field '${key}' (city comes from the folder name, notes go below the frontmatter)`);
+      errors.push(`${prefix}: unexpected frontmatter field '${key}'`);
     }
   });
 
   const location = {
     name: fields.name || '',
     address: fields.address || '',
-    city: CITY_SLUGS[citySlug] || citySlug,
+    city: fields.city || CITY_SLUGS[citySlug] || citySlug,
     google_maps_link: fields.google_maps_link || '',
     notes,
     file: prefix

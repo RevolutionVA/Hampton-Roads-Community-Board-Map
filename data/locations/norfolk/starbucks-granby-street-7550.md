@@ -1,6 +1,13 @@
 ---
 name: Starbucks - Granby Street (7550)
 address: 7550 Granby Street, Norfolk, VA 23505
+city: Norfolk
+area: wards-corner
+lat: 36.91448
+lng: -76.27065999999999
+category: coffee-shop
+board_type: magnetic
+status: verified
 google_maps_link: https://www.google.com/maps/search/?api=1&query=Starbucks%20-%20Granby%20Street%20(7550)%2C%207550%20Granby%20Street%2C%20Norfolk%2C%20VA%2023505
 ---
 

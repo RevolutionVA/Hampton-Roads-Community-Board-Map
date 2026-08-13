@@ -1,6 +1,13 @@
 ---
 name: Denbigh Community Center
 address: 15198 Warwick Blvd, Newport News, VA 23608
+city: Newport News
+area: denbigh
+lat: 37.1423964
+lng: -76.5469873
+category: community-center
+board_type: bulletin-board
+status: verified
 google_maps_link: https://www.google.com/maps/search/?api=1&query=Denbigh%20Community%20Center%2C%2015198%20Warwick%20Blvd%2C%20Newport%20News%2C%20VA%2023608
 ---
 
