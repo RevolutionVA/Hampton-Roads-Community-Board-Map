@@ -46,6 +46,29 @@ body:
     validations:
       required: true
 
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: Area slug shown by the matching area:* repository label (for example, ghent or town-center)
+      placeholder: "ghent"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - coffee-shop
+        - restaurant
+        - library
+        - community-center
+        - convenience-store
+        - other
+    validations:
+      required: true
+
   - type: textarea
     id: notes
     attributes:

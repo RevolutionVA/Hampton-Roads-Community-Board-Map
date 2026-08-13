@@ -1,6 +1,13 @@
 ---
 name: Willow Oaks Branch Library
 address: 227 Fox Hill Rd, Hampton, VA 23669
+city: Hampton
+area: buckroe-fox-hill
+lat: 37.0587783
+lng: -76.32764580000001
+category: library
+board_type: bulletin-board
+status: verified
 google_maps_link: https://www.google.com/maps/search/?api=1&query=Willow%20Oaks%20Branch%20Library%2C%20227%20Fox%20Hill%20Rd%2C%20Hampton%2C%20VA%2023669
 ---
 

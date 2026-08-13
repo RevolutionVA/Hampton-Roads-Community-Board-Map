@@ -18,6 +18,10 @@ const VALID_CONTENT = `---
 name: Test Library
 address: 123 Main St, Norfolk, VA 23510
 google_maps_link: https://maps.app.goo.gl/abc123
+city: Norfolk
+area: ghent
+category: library
+status: needs-verification
 ---
 
 Front entrance.
@@ -76,6 +80,9 @@ describe('buildLocationFile', () => {
     const location = {
       name: 'Kroger - Granby St',
       address: '123 Granby St, Norfolk, VA 23510',
+      city: 'Norfolk',
+      area: 'downtown-norfolk',
+      category: 'other',
       google_maps_link: 'https://maps.google.com/k',
       notes: 'Board by the pharmacy.'
     };
@@ -83,6 +90,10 @@ describe('buildLocationFile', () => {
     assert.strictEqual(errors.length, 0);
     assert.strictEqual(fields.name, location.name);
     assert.strictEqual(fields.address, location.address);
+    assert.strictEqual(fields.city, location.city);
+    assert.strictEqual(fields.area, location.area);
+    assert.strictEqual(fields.category, location.category);
+    assert.strictEqual(fields.status, 'needs-verification');
     assert.strictEqual(fields.google_maps_link, location.google_maps_link);
     assert.strictEqual(notes, location.notes);
   });
@@ -116,7 +127,7 @@ describe('validateLocationFile', () => {
   });
 
   it('accepts a file without notes', () => {
-    const { errors } = validateLocationFile('norfolk', 'test.md', '---\nname: T\naddress: 1 A St\ngoogle_maps_link: https://x\n---\n');
+    const { errors } = validateLocationFile('norfolk', 'test.md', VALID_CONTENT.replace('name: Test Library', 'name: T'));
     assert.strictEqual(errors.length, 0);
   });
 
@@ -135,7 +146,10 @@ describe('validateLocationFile', () => {
   it('rejects missing required fields', () => {
     const { errors } = validateLocationFile('norfolk', 'test.md', '---\nname: Test\n---\n');
     assert.ok(errors.some(e => e.includes("missing required frontmatter field 'address'")));
-    assert.ok(errors.some(e => e.includes("missing required frontmatter field 'google_maps_link'")));
+    assert.ok(errors.some(e => e.includes("missing required frontmatter field 'city'")));
+    assert.ok(errors.some(e => e.includes("missing required frontmatter field 'area'")));
+    assert.ok(errors.some(e => e.includes("missing required frontmatter field 'category'")));
+    assert.ok(errors.some(e => e.includes("missing required frontmatter field 'status'")));
   });
 
   it('rejects http (non-https) links', () => {
@@ -145,22 +159,44 @@ describe('validateLocationFile', () => {
   });
 
   it('rejects unexpected frontmatter fields', () => {
-    const content = '---\nname: T\naddress: 1 A St\ngoogle_maps_link: https://x\nphone: 555-1234\n---\n';
+    const content = VALID_CONTENT.replace('status: needs-verification', 'status: needs-verification\nphone: 555-1234');
     const { errors } = validateLocationFile('norfolk', 'test.md', content);
     assert.ok(errors.some(e => e.includes("unexpected frontmatter field 'phone'")));
   });
 
-  it('rejects a city field in frontmatter (city comes from the folder)', () => {
-    const content = '---\nname: T\naddress: 1 A St\ncity: Norfolk\ngoogle_maps_link: https://x\n---\n';
+  it('rejects a city field that disagrees with its folder', () => {
+    const content = VALID_CONTENT.replace('city: Norfolk', 'city: Hampton');
     const { errors } = validateLocationFile('norfolk', 'test.md', content);
-    assert.ok(errors.some(e => e.includes("unexpected frontmatter field 'city'")));
+    assert.ok(errors.some(e => e.includes("city 'Hampton' does not match folder 'norfolk'")));
+  });
+
+  it('rejects invalid enum values and incomplete coordinate pairs', () => {
+    const content = VALID_CONTENT.replace('category: library', 'category: store').replace('status: needs-verification', 'status: unknown').replace('area: ghent', 'area: nowhere').replace('city: Norfolk', 'city: Norfolk\nlat: 36.8');
+    const { errors } = validateLocationFile('norfolk', 'test.md', content);
+    assert.ok(errors.some(e => e.includes('invalid category')));
+    assert.ok(errors.some(e => e.includes('invalid status')));
+    assert.ok(errors.some(e => e.includes('invalid area')));
+    assert.ok(errors.some(e => e.includes('lat and lng must be provided together')));
+  });
+
+  it('rejects invalid coordinate bounds and invalid verified dates', () => {
+    const content = VALID_CONTENT.replace('city: Norfolk', 'city: Norfolk\nlat: 91\nlng: -181\nverified_date: 2026-02-30');
+    const { errors } = validateLocationFile('norfolk', 'test.md', content);
+    assert.ok(errors.some(e => e.includes('lat must be a number between -90 and 90')));
+    assert.ok(errors.some(e => e.includes('lng must be a number between -180 and 180')));
+    assert.ok(errors.some(e => e.includes('verified_date must be a real date')));
   });
 
   describe('accepts every known city folder', () => {
     const slugs = ['chesapeake', 'hampton', 'newport-news', 'norfolk', 'portsmouth', 'suffolk', 'virginia-beach'];
     slugs.forEach(slug => {
       it(`accepts ${slug}`, () => {
-        const { errors, location } = validateLocationFile(slug, 'test.md', VALID_CONTENT);
+        const content = VALID_CONTENT.replace('city: Norfolk', `city: ${{
+          chesapeake: 'Chesapeake', hampton: 'Hampton', 'newport-news': 'Newport News',
+          norfolk: 'Norfolk', portsmouth: 'Portsmouth', suffolk: 'Suffolk',
+          'virginia-beach': 'Virginia Beach'
+        }[slug]}`);
+        const { errors, location } = validateLocationFile(slug, 'test.md', content);
         assert.strictEqual(errors.length, 0);
         assert.ok(VALID_CITIES.includes(location.city));
       });
