@@ -10,9 +10,61 @@ const README_PATH = path.join(__dirname, '..', 'README.md');
 // README is a compact text directory. Supporting photos remain available on
 // individual location pages, but complete Markdown image constructs do not
 // belong in table cells. Ordinary Markdown links are intentionally preserved.
+function stripInlineMarkdownImages(markdown) {
+  let result = '';
+
+  for (let index = 0; index < markdown.length;) {
+    if (markdown[index] !== '!' || markdown[index + 1] !== '[') {
+      result += markdown[index++];
+      continue;
+    }
+
+    let cursor = index + 2;
+    let escaped = false;
+    for (; cursor < markdown.length; cursor++) {
+      const char = markdown[cursor];
+      if (!escaped && char === ']') break;
+      if (!escaped && char === '\\') escaped = true;
+      else escaped = false;
+    }
+
+    if (cursor >= markdown.length || markdown[cursor + 1] !== '(') {
+      result += markdown[index++];
+      continue;
+    }
+
+    cursor += 2;
+    let depth = 1;
+    escaped = false;
+    for (; cursor < markdown.length && depth > 0; cursor++) {
+      const char = markdown[cursor];
+      if (char === '\n' || char === '\r') break;
+      if (!escaped && char === '(') depth++;
+      else if (!escaped && char === ')') depth--;
+      if (!escaped && char === '\\') escaped = true;
+      else escaped = false;
+    }
+
+    if (depth !== 0) {
+      result += markdown[index++];
+      continue;
+    }
+
+    // Collapse only whitespace adjacent to the removed image. This prevents
+    // inline images from merging words without rewriting unrelated note text.
+    result = result.replace(/[ \t]+$/, '');
+    while (markdown[cursor] === ' ' || markdown[cursor] === '\t') cursor++;
+    if (result && !/\s$/.test(result) && cursor < markdown.length && !/\s/.test(markdown[cursor])) {
+      result += ' ';
+    }
+    index = cursor;
+  }
+
+  return result;
+}
+
 function formatNotesForReadme(notes) {
-  return (notes || '')
-    .replace(/!\[[^\]]*\]\([^\r\n)]*\)/g, '')
+  return stripInlineMarkdownImages(notes || '')
     .replace(/\s*\n\s*/g, ' ')
     .trim();
 }

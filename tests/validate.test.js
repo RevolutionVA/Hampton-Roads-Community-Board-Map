@@ -9,7 +9,7 @@ const {
   validateReadmeInSync,
   VALID_CITIES
 } = require('../scripts/validate');
-const { generateTable, updateReadme, extractTable, START_MARKER, END_MARKER } = require('../scripts/generate-readme');
+const { generateTable, updateReadme, extractTable, formatNotesForReadme, START_MARKER, END_MARKER } = require('../scripts/generate-readme');
 const { parseLocationFile, buildLocationFile, loadLocations, slugify, cityToSlug } = require('../scripts/locations');
 
 const fixturesDir = path.join(__dirname, 'fixtures');
@@ -251,10 +251,10 @@ describe('generateTable', () => {
     const locations = [{
       name: 'Project Seed Coffee',
       address: '1 A St',
-      city: 'Norfolk',
+      city: 'Virginia Beach',
       google_maps_link: 'https://x',
       notes: 'Community board confirmed in person. Located near the bathroom. Bring push pins.\n\n![Community board photo](../../../images/board.jpg)',
-      file: 'data/locations/norfolk/test.md'
+      file: 'data/locations/virginia-beach/project-seed-coffee.md'
     }];
     const md = generateTable(locations);
     assert.ok(md.includes('| Community board confirmed in person. Located near the bathroom. Bring push pins. |'));
@@ -276,6 +276,31 @@ describe('generateTable', () => {
     assert.ok(md.includes('See [posting rules](https://example.com/rules).'));
     assert.ok(!md.includes('Rules sign'));
     assert.ok(!md.includes('../../../images/rules.jpg'));
+  });
+
+  it('removes images whose destinations contain balanced parentheses', () => {
+    const notes = 'Before ![Board](https://example.com/foo(bar).jpg) after.';
+    assert.strictEqual(formatNotesForReadme(notes), 'Before after.');
+  });
+
+  it('keeps inline image removal from merging surrounding words', () => {
+    assert.strictEqual(formatNotesForReadme('before![Board](board.jpg)after'), 'before after');
+  });
+
+  it('normalizes whitespace after removing images', () => {
+    const notes = 'Before  \n ![Board](board.jpg)\t  after.';
+    assert.strictEqual(formatNotesForReadme(notes), 'Before after.');
+  });
+
+  it('preserves ordinary links with balanced parentheses', () => {
+    const notes = 'See [the photo](https://example.com/foo(bar).jpg).';
+    assert.strictEqual(formatNotesForReadme(notes), notes);
+  });
+
+  it('formats notes idempotently', () => {
+    const notes = 'Before ![Board](https://example.com/foo(bar).jpg) after.';
+    const formatted = formatNotesForReadme(notes);
+    assert.strictEqual(formatNotesForReadme(formatted), formatted);
   });
 
   it('handles missing notes with empty cell', () => {
