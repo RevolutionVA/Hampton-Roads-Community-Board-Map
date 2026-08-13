@@ -15,7 +15,13 @@ function generateTable(locations) {
 
   for (const loc of locations) {
     const nameCell = loc.file ? `[${loc.name}](${loc.file})` : loc.name;
-    const notesCell = (loc.notes || '').replace(/\s*\n\s*/g, ' ');
+    const notesCell = (loc.notes || '')
+      .replace(/(!\[[^\]]*\]\()([^):]+)(\))/g, (match, prefix, target, suffix) => {
+        if (!loc.file || target.startsWith('/')) return match;
+        const rebasedTarget = path.posix.normalize(path.posix.join(path.posix.dirname(loc.file), target));
+        return `${prefix}${rebasedTarget}${suffix}`;
+      })
+      .replace(/\s*\n\s*/g, ' ');
     markdown += `| ${loc.city} | ${nameCell} | ${loc.address} | [Map](${loc.google_maps_link}) | ${notesCell} |\n`;
   }
 

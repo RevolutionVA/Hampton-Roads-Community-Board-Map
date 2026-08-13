@@ -247,6 +247,20 @@ describe('generateTable', () => {
     assert.ok(md.includes('| Line one. Line two. |'));
   });
 
+  it('rebases relative note images for the README location', () => {
+    const locations = [{
+      name: 'Test',
+      address: '1 A St',
+      city: 'Norfolk',
+      google_maps_link: 'https://x',
+      notes: 'Board. ![Board](../../../images/board.jpg)',
+      file: 'data/locations/norfolk/test.md'
+    }];
+    const md = generateTable(locations);
+    assert.ok(md.includes('Board. ![Board](images/board.jpg)'));
+    assert.ok(!md.includes('../../../images/board.jpg'));
+  });
+
   it('handles missing notes with empty cell', () => {
     const locations = [{
       name: 'Test',
