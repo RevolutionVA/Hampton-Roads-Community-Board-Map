@@ -158,6 +158,18 @@ describe('validateLocationFile', () => {
     assert.ok(errors.some(e => e.includes('https://')));
   });
 
+  it('rejects google_maps_link URLs on non-Google hosts', () => {
+    const content = VALID_CONTENT.replace('https://maps.app.goo.gl/abc123', 'https://www.openstreetmap.org/way/1545452520');
+    const { errors } = validateLocationFile('norfolk', 'test.md', content);
+    assert.ok(errors.some(e => e.includes('google.com or maps.app.goo.gl')));
+  });
+
+  it('reports malformed HTTPS google_maps_link values without throwing', () => {
+    const content = VALID_CONTENT.replace('https://maps.app.goo.gl/abc123', 'https://');
+    const { errors } = validateLocationFile('norfolk', 'test.md', content);
+    assert.ok(errors.some(e => e.includes('valid URL')));
+  });
+
   it('rejects unexpected frontmatter fields', () => {
     const content = VALID_CONTENT.replace('status: needs-verification', 'status: needs-verification\nphone: 555-1234');
     const { errors } = validateLocationFile('norfolk', 'test.md', content);

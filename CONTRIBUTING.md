@@ -20,7 +20,7 @@ Required fields:
 
 Optional fields:
 
-- `google_maps_link`: an HTTPS map URL.
+- `google_maps_link`: an HTTPS Google Maps URL on `google.com` or `maps.app.goo.gl`.
 - `lat` and `lng`: real geocoded coordinates; include both or omit both.
 - `board_type`: `window`, `bulletin-board`, `magnetic`, or `other`.
 - `verified_date`: the date of an actual in-person verification in `YYYY-MM-DD` format.

@@ -42,6 +42,15 @@ function validateLocationFile(citySlug, filename, content) {
   if (fields.google_maps_link && !fields.google_maps_link.startsWith('https://')) {
     errors.push(`${prefix}: google_maps_link must start with https://`);
   }
+  if (fields.google_maps_link && fields.google_maps_link.startsWith('https://')) {
+    try {
+      const hostname = new URL(fields.google_maps_link).hostname.toLowerCase();
+      const isGoogleHost = hostname === 'google.com' || hostname.endsWith('.google.com') || hostname === 'maps.app.goo.gl';
+      if (!isGoogleHost) errors.push(`${prefix}: google_maps_link must point to google.com or maps.app.goo.gl`);
+    } catch {
+      errors.push(`${prefix}: google_maps_link must be a valid URL`);
+    }
+  }
 
   if (fields.city && fields.city !== CITY_SLUGS[citySlug]) {
     errors.push(`${prefix}: city '${fields.city}' does not match folder '${citySlug}'`);
