@@ -24,7 +24,7 @@ A community-maintained directory of physical bulletin boards in Hampton Roads, V
 | Norfolk | [Wawa - East Little Creek Road (975)](data/locations/norfolk/wawa-east-little-creek-road-975.md) | 975 East Little Creek Road, Norfolk, VA 23513 | [Map](https://www.google.com/maps/search/?api=1&query=Wawa%20-%20East%20Little%20Creek%20Road%20(975)%2C%20975%20East%20Little%20Creek%20Road%2C%20Norfolk%2C%20VA%2023513) | Community board confirmed in person. Bring push pins. |
 | Virginia Beach | [Kempsville Area Library](data/locations/virginia-beach/kempsville-area-library.md) | 832 Kempsville Rd, Virginia Beach, VA 23464 | [Map](https://maps.app.goo.gl/gQYfn8BtAkZVJSpx7) | Enter through the front door. The librarian will post flyers on the community bulletin board as long as there is a date and location listed. |
 | Virginia Beach | [Pinup Coffee Co - Sherwood Lakes](data/locations/virginia-beach/pinup-coffee-co-sherwood-lakes.md) | 2160 Locksley Arch Suite 130, Virginia Beach, VA 23456 | [Map](https://www.google.com/maps/search/?api=1&query=Pinup%20Coffee%20Co%2C%202160%20Locksley%20Arch%20Suite%20130%2C%20Virginia%20Beach%2C%20VA%2023456) | Coffee shop in the Sherwood Lakes shopping center off Princess Anne Road (Pungo area). |
-| Virginia Beach | [Project Seed Coffee](data/locations/virginia-beach/project-seed-coffee.md) | 4740 Baxter Road, Virginia Beach, VA 23462 | [Map](https://www.google.com/maps/search/?api=1&query=Project+Seed+Coffee,+4740+Baxter+Road,+Virginia+Beach,+VA+23462) | Community board confirmed in person. Located near the bathroom. Bring push pins. ![Project Seed Coffee community bulletin board covered with local flyers and business cards](images/project-seed-coffee-community-board.jpg) |
+| Virginia Beach | [Project Seed Coffee](data/locations/virginia-beach/project-seed-coffee.md) | 4740 Baxter Road, Virginia Beach, VA 23462 | [Map](https://www.google.com/maps/search/?api=1&query=Project+Seed+Coffee,+4740+Baxter+Road,+Virginia+Beach,+VA+23462) | Community board confirmed in person. Located near the bathroom. Bring push pins. |
 | Virginia Beach | [Regent University Library](data/locations/virginia-beach/regent-university-library.md) | 1000 Regent University Dr, Virginia Beach, VA 23464 | [Map](https://maps.app.goo.gl/TwiJYZZQB5h4mrLG6) | Parking is in the rear of the building. Enter through the front door. Walk in and ring the bell for access. Guest Services will check your ID and direct you to the left, where Print Card Services is located. Staff will accept 7 flyers and post them around campus. |
 | Virginia Beach | [TCC / City of Virginia Beach Joint-Use Library](data/locations/virginia-beach/tcc-city-of-virginia-beach-joint-use-library.md) | 1700 College Crescent, Virginia Beach, VA 23453 | [Map](https://www.google.com/maps/search/?api=1&query=TCC%20%2F%20City%20of%20Virginia%20Beach%20Joint-Use%20Library%2C%201700%20College%20Crescent%2C%20Virginia%20Beach%2C%20VA%2023453) | The Community Nook is a designated area for posting and distributing educational, civic, and cultural materials, with sections for City, Community, College, and Career items. Postings require library staff approval; items must be non-commercial, non-partisan, of local interest, advertise only free public events, and carry a discard-by date. |
 | Virginia Beach | [Town Center Coldpressed](data/locations/virginia-beach/town-center-coldpressed.md) | 168 Central Park Ave, Virginia Beach, VA 23462 | [Map](https://maps.app.goo.gl/QPpKZYKL4CdyJpCp8) | There is a section inside the door with flyers and notices.  It's requested to contact `joe.trask@tccp.cafe` before putting material there. |
@@ -41,7 +41,31 @@ When you submit, a pull request is automatically created for review.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the location schema and pull-request steps. New entries start as `needs-verification`; only a person who confirms the board in person may mark one `verified`.
+The easiest way is the [submission form](../../issues/new?template=new-location.yml) above — no coding required.
+
+Prefer a pull request? Each location is one small Markdown file, so adding a location means adding one file:
+
+1. Fork this repository
+2. Create `data/locations/<city>/<location-name>.md` (kebab-case, e.g. `data/locations/norfolk/ocean-view-library.md`)
+3. Submit a pull request
+
+That's it — the locations table above is auto-generated, so don't edit it by hand. You can optionally run `npm test` and `npm run validate` locally, but CI checks everything for you.
+
+## Data Format
+
+Each location file looks like this:
+
+```markdown
+---
+name: Ocean View Library
+address: 123 Main St, Norfolk, VA 23510
+google_maps_link: https://maps.google.com/...
+---
+
+Where to find the board, any restrictions or tips.
+```
+
+The city comes from the folder name (`norfolk`, `virginia-beach`, `newport-news`, ...). The section below the `---` lines is free-form notes and is optional.
 
 ## License
 
