@@ -12,3 +12,5 @@ From there own site:
 Forge and Factions aims to be the makerspace for tabletop enthusiasts. We specialize in tabletop wargame experience and make it our mission to take you from sprue to battle-ready with your armies!
 
 They took my flyer & don't have an official community board, but put it up on their whiteboard behind the counter.  They generally have tape & whatnot, but wouldn't hurt to bring some just in case.
+
+Verification submitted by [@TekGadgt](https://github.com/TekGadgt) in [issue #256](https://github.com/RevolutionVA/Hampton-Roads-Community-Board-Map/issues/256).
