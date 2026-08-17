@@ -3,8 +3,8 @@ name: Starbucks - Sentinel Drive (1746)
 address: 1746 Sentinel Drive, Chesapeake, VA 23320
 city: Chesapeake
 area: greenbrier
-lat: 36.7784748
-lng: -76.2531063
+lat: 36.77925
+lng: -76.25636999999999
 category: coffee-shop
 board_type: magnetic
 status: verified
