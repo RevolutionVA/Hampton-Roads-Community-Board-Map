@@ -94,6 +94,7 @@ describe('buildLocationFile', () => {
     assert.strictEqual(fields.area, location.area);
     assert.strictEqual(fields.category, location.category);
     assert.strictEqual(fields.status, 'needs-verification');
+    assert.strictEqual(fields.verified_date, undefined);
     assert.strictEqual(fields.google_maps_link, location.google_maps_link);
     assert.strictEqual(notes, location.notes);
   });
@@ -101,6 +102,16 @@ describe('buildLocationFile', () => {
   it('omits notes section when notes are empty', () => {
     const content = buildLocationFile({ name: 'A', address: 'B', google_maps_link: 'https://x', notes: '' });
     assert.ok(content.endsWith('---\n'));
+  });
+
+  it('round-trips a human no-board finding and visit date', () => {
+    const { fields, notes } = parseLocationFile(VALID_CONTENT);
+    const report = { ...fields, notes, status: 'no-board', verified_date: '2026-08-25' };
+    const result = parseLocationFile(buildLocationFile(report));
+    assert.deepStrictEqual(result.errors, []);
+    assert.strictEqual(result.fields.status, 'no-board');
+    assert.strictEqual(result.fields.verified_date, '2026-08-25');
+    assert.strictEqual(result.notes, notes);
   });
 });
 
@@ -118,6 +129,29 @@ describe('slugify and cityToSlug', () => {
 });
 
 describe('validateLocationFile', () => {
+  it('accepts every supported status and preserves it for README validation', () => {
+    for (const status of ['needs-verification', 'verified', 'no-board']) {
+      const content = VALID_CONTENT.replace('status: needs-verification', `status: ${status}`);
+      const { errors, location } = validateLocationFile('norfolk', 'test.md', content);
+      assert.deepStrictEqual(errors, [], status);
+      assert.strictEqual(location.status, status);
+    }
+  });
+
+  it('accepts a no-board finding with an actual visit date', () => {
+    const content = VALID_CONTENT.replace('status: needs-verification', 'status: no-board\nverified_date: 2026-08-25');
+    const { errors } = validateLocationFile('norfolk', 'test.md', content);
+    assert.deepStrictEqual(errors, []);
+  });
+
+  it('rejects malformed or impossible no-board visit dates', () => {
+    for (const date of ['2026-02-30', '2026-13-01', '08/25/2026', 'unknown']) {
+      const content = VALID_CONTENT.replace('status: needs-verification', `status: no-board\nverified_date: ${date}`);
+      const { errors } = validateLocationFile('norfolk', 'test.md', content);
+      assert.ok(errors.some(e => e.includes('verified_date must be a real date')), date);
+    }
+  });
+
   it('accepts a valid file', () => {
     const { errors, location } = validateLocationFile('norfolk', 'test-library.md', VALID_CONTENT);
     assert.strictEqual(errors.length, 0);
@@ -217,6 +251,15 @@ describe('validateLocationFile', () => {
 });
 
 describe('validateLocationSet', () => {
+  it('rejects a repeated location even when the earlier finding was no-board', () => {
+    const result = validateLocationSet([
+      { name: 'No Board Cafe', address: '2 Example St', status: 'no-board' },
+      { name: 'NO BOARD CAFE', address: '2 example st', status: 'needs-verification' }
+    ]);
+    assert.strictEqual(result.valid, false);
+    assert.ok(result.errors.some(e => e.includes('Duplicate')));
+  });
+
   it('accepts distinct locations', () => {
     const result = validateLocationSet([
       { name: 'A', address: '1 A St' },
@@ -239,8 +282,9 @@ describe('validateLocationsDir', () => {
   it('validates a well-formed tree and sorts by city then name', () => {
     const result = validateLocationsDir(path.join(fixturesDir, 'valid-tree'));
     assert.strictEqual(result.valid, true, JSON.stringify(result.errors));
-    assert.deepStrictEqual(result.locations.map(l => l.name), ['Alpha Place', 'No Notes Place', 'Test Library']);
-    assert.deepStrictEqual(result.locations.map(l => l.city), ['Hampton', 'Norfolk', 'Norfolk']);
+    assert.deepStrictEqual(result.locations.map(l => l.name), ['Alpha Place', 'No Board Cafe', 'No Notes Place', 'Test Library']);
+    assert.deepStrictEqual(result.locations.map(l => l.city), ['Hampton', 'Norfolk', 'Norfolk', 'Norfolk']);
+    assert.strictEqual(result.locations[1].status, 'no-board');
   });
 
   it('reports stray files and unknown city folders', () => {
@@ -254,7 +298,9 @@ describe('validateLocationsDir', () => {
 describe('loadLocations', () => {
   it('loads and sorts locations from a tree', () => {
     const locations = loadLocations(path.join(fixturesDir, 'valid-tree'));
-    assert.strictEqual(locations.length, 3);
+    assert.strictEqual(locations.length, 4);
+    assert.strictEqual(locations[1].status, 'no-board');
+    assert.strictEqual(locations[1].verified_date, '2026-08-25');
     assert.strictEqual(locations[0].name, 'Alpha Place');
     assert.strictEqual(locations[0].city, 'Hampton');
     assert.strictEqual(locations[0].file, 'data/locations/hampton/alpha-place.md');
@@ -262,6 +308,25 @@ describe('loadLocations', () => {
 });
 
 describe('generateTable', () => {
+  it('excludes only no-board records without changing the source array', () => {
+    const locations = ['verified', 'no-board', 'needs-verification'].map(status => ({
+      name: status,
+      address: '1 Example St',
+      city: 'Norfolk',
+      status,
+      file: `data/locations/norfolk/${status}.md`
+    }));
+    const before = JSON.stringify(locations);
+    assert.strictEqual(generateTable(locations), generateTable([locations[0], locations[2]]));
+    assert.ok(generateTable(locations).includes('[verified]'));
+    assert.ok(generateTable(locations).includes('[needs-verification]'));
+    assert.strictEqual(JSON.stringify(locations), before);
+  });
+
+  it('renders a header-only table when all records are no-board', () => {
+    assert.strictEqual(generateTable([{ name: 'No Board Cafe', status: 'no-board' }]), generateTable([]));
+  });
+
   it('generates generated-file notice and table structure', () => {
     const md = generateTable([]);
     assert.ok(md.includes('auto-generated'));
@@ -433,6 +498,34 @@ describe('validateReadmeInSync', () => {
   function readmeFor(locations) {
     return updateReadme(emptyReadme, locations);
   }
+
+  it('agrees with the file loader while retaining no-board records for validation', () => {
+    const dir = path.join(fixturesDir, 'valid-tree');
+    const loaded = loadLocations(dir);
+    const result = validateLocationsDir(dir);
+    assert.strictEqual(result.valid, true);
+    const readme = readmeFor(loaded);
+    assert.ok(!readme.includes('No Board Cafe'));
+    assert.strictEqual(loaded.length, 4);
+    assert.strictEqual(result.locations.length, 4);
+    assert.strictEqual(validateReadmeInSync(result.locations, readme).valid, true);
+  });
+
+  it('rejects a README that still lists a no-board location', () => {
+    const noBoard = { ...location, status: 'no-board' };
+    assert.strictEqual(validateReadmeInSync([noBoard], readmeFor([location])).valid, false);
+  });
+
+  it('removes a negative finding and restores a later verified posting location', () => {
+    const noBoard = { ...location, status: 'no-board' };
+    const verified = { ...location, status: 'verified' };
+    const removed = updateReadme(readmeFor([verified]), [noBoard]);
+    assert.strictEqual(removed, readmeFor([]));
+    assert.strictEqual(validateReadmeInSync([noBoard], removed).valid, true);
+    const restored = updateReadme(removed, [verified]);
+    assert.strictEqual(restored, readmeFor([verified]));
+    assert.strictEqual(validateReadmeInSync([verified], restored).valid, true);
+  });
 
   it('passes when the README table matches exactly', () => {
     const result = validateReadmeInSync([location], readmeFor([location]));

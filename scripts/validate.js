@@ -87,6 +87,7 @@ function validateLocationFile(citySlug, filename, content) {
     name: fields.name || '',
     address: fields.address || '',
     city: fields.city || CITY_SLUGS[citySlug] || citySlug,
+    status: fields.status || '',
     google_maps_link: fields.google_maps_link || '',
     notes,
     file: prefix

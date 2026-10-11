@@ -90,12 +90,13 @@ jobs:
 
             const locationPath = `data/locations/${citySlug}/${fileSlug}.md`;
             if (fs.existsSync(locationPath)) {
-              await comment(`❌ A location file already exists for this name: \`${locationPath}\`\n\nIf this is a different location, please adjust the name to distinguish it.`);
+              await comment(`❌ A location file already exists for this name: \`${locationPath}\`\n\nCheck its status and notes, including any in-person no-board finding, before planning another visit. To report a change at the same location, update the existing record in a pull request. If this is a different location, please adjust the name to distinguish it.`);
               return;
             }
 
             fs.mkdirSync(path.dirname(locationPath), { recursive: true });
-            // Verification is deliberately human-only. Automated intake always starts here.
+            // Both verified and no-board require a human in-person finding.
+            // Automated intake always starts here and never sets verified_date.
             fs.writeFileSync(locationPath, buildLocationFile({
               name, address, city, area, category,
               status: 'needs-verification',
