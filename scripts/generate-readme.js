@@ -76,6 +76,8 @@ function generateTable(locations) {
   markdown += '|------|------|---------|-----|-------|\n';
 
   for (const loc of locations) {
+    // Keep negative in-person findings in the data, but not in the posting directory.
+    if (loc.status === 'no-board') continue;
     const nameCell = loc.file ? `[${loc.name}](${loc.file})` : loc.name;
     const notesCell = formatNotesForReadme(loc.notes);
     markdown += `| ${loc.city} | ${nameCell} | ${loc.address} | [Map](${loc.google_maps_link}) | ${notesCell} |\n`;
@@ -138,7 +140,8 @@ if (require.main === module) {
   }
 
   fs.writeFileSync(readmePath, updated, 'utf8');
-  console.log(`✅ Updated ${readmePath} with ${locations.length} locations`);
+  const listedCount = locations.filter(loc => loc.status !== 'no-board').length;
+  console.log(`✅ Updated ${readmePath} with ${listedCount} listed locations (${locations.length} total records)`);
 }
 
 module.exports = { generateTable, updateReadme, extractTable, formatNotesForReadme, START_MARKER, END_MARKER, README_PATH };

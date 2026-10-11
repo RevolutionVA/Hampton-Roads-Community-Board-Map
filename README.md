@@ -6,6 +6,8 @@ A community-maintained directory of physical bulletin boards in Hampton Roads, V
 
 ## Locations
 
+The table includes posting locations and candidates awaiting an in-person check. See each location's `status` and notes for its verification details. Locations confirmed in person to have no board (`no-board`) remain in [the location records](data/locations/) but are omitted here. Check those records and existing issues before planning a verification visit.
+
 <!-- locations:start -->
 
 <!-- This table is auto-generated from data/locations/ - do not edit by hand. -->
@@ -63,13 +65,17 @@ Each location file looks like this:
 ---
 name: Ocean View Library
 address: 123 Main St, Norfolk, VA 23510
+city: Norfolk
+area: ocean-view
+category: library
+status: needs-verification
 google_maps_link: https://maps.google.com/...
 ---
 
 Where to find the board, any restrictions or tips.
 ```
 
-The city comes from the folder name (`norfolk`, `virginia-beach`, `newport-news`, ...). The section below the `---` lines is free-form notes and is optional.
+The `city` must match the folder name (`norfolk`, `virginia-beach`, `newport-news`, ...). The section below the `---` lines is free-form notes and is optional. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full schema and the `needs-verification`, `verified`, and `no-board` statuses. Research and automated submissions remain `needs-verification`; both positive and negative verification outcomes require an in-person human finding.
 
 ## License
 

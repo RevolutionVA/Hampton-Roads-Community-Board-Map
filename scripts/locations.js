@@ -27,7 +27,7 @@ const VALID_AREAS = [
 ];
 const VALID_CATEGORIES = ['coffee-shop', 'restaurant', 'library', 'community-center', 'convenience-store', 'other'];
 const VALID_BOARD_TYPES = ['window', 'bulletin-board', 'magnetic', 'other'];
-const VALID_STATUSES = ['needs-verification', 'verified'];
+const VALID_STATUSES = ['needs-verification', 'verified', 'no-board'];
 
 const LOCATIONS_DIR = path.join(__dirname, '..', 'data', 'locations');
 
