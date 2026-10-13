@@ -129,6 +129,36 @@ describe('slugify and cityToSlug', () => {
 });
 
 describe('validateLocationFile', () => {
+  it('retains a staff-email verified location without claiming an in-person visit', () => {
+    const { fields } = parseLocationFile(VALID_CONTENT);
+    const notes = 'Board and staff posting process confirmed by email on October 13, 2026; not an in-person visit. Undated flyers typically rotate off after about a month.';
+    const content = buildLocationFile({ ...fields, status: 'verified', notes });
+    const parsed = parseLocationFile(content);
+    assert.strictEqual(parsed.fields.verified_date, undefined);
+    assert.strictEqual(parsed.notes, notes);
+    const { errors, location } = validateLocationFile('norfolk', 'test-library.md', content);
+    assert.deepStrictEqual(errors, []);
+    assert.strictEqual(location.status, 'verified');
+    const table = generateTable([location]);
+    assert.ok(table.includes('Test Library'));
+    assert.ok(table.includes(notes));
+  });
+
+  it('retains a staff-email no-board finding without inventing a visit date', () => {
+    const { fields } = parseLocationFile(VALID_CONTENT);
+    const notes = 'Staff confirmed by email on October 13, 2026 that there is no public board; not an in-person visit.';
+    const content = buildLocationFile({ ...fields, status: 'no-board', notes });
+    const parsed = parseLocationFile(content);
+    assert.strictEqual(parsed.fields.verified_date, undefined);
+    assert.strictEqual(parsed.fields.board_type, undefined);
+    assert.strictEqual(parsed.notes, notes);
+    const { errors, location } = validateLocationFile('norfolk', 'test-library.md', content);
+    assert.deepStrictEqual(errors, []);
+    assert.strictEqual(location.status, 'no-board');
+    assert.strictEqual(location.notes, notes);
+    assert.strictEqual(generateTable([location]), generateTable([]));
+  });
+
   it('accepts every supported status and preserves it for README validation', () => {
     for (const status of ['needs-verification', 'verified', 'no-board']) {
       const content = VALID_CONTENT.replace('status: needs-verification', `status: ${status}`);
