@@ -6,7 +6,8 @@ city: Norfolk
 area: ghent
 category: other
 # Status: needs-verification (default), verified, or no-board.
-# Only a human in-person finding can establish verified or no-board.
+# Verified requires a human in-person finding. No-board may also use a
+# reviewed direct staff confirmation; state the method and date in the notes.
 status: needs-verification
 
 # Optional fields: omit unknown values rather than leaving them empty.
@@ -20,5 +21,6 @@ board_type: other
 ---
 
 Describe where to find the board, posting rules, and useful tips. For no-board,
-describe the in-person finding and link the report when available. Keep the file
+describe the finding and evidence basis (in-person or direct staff confirmation),
+and link the report when available. Keep the file
 so contributors can check it before planning another visit.

@@ -26,7 +26,7 @@ Free-form notes: where to find the board, restrictions, tips. Optional.
 
 Frontmatter is flat `key: value` pairs parsed by `scripts/locations.js` (no YAML library). Required fields are `name`, `address`, `city`, `area`, `category`, and `status`. Optional fields are `google_maps_link`, `lat`, `lng`, `board_type`, and `verified_date`; other fields are rejected. See `CONTRIBUTING.md` for accepted values.
 
-Status is `needs-verification`, `verified`, or `no-board`. Research and automated intake remain `needs-verification`. Only human in-person findings establish `verified` or `no-board`; never fabricate an outcome or visit date. Keep `no-board` records in the data and duplicate checks, but exclude them from the generated README table. Check existing records and issues before planning another visit. Update the same record if a later human visit changes the outcome.
+Status is `needs-verification`, `verified`, or `no-board`. Research and automated intake remain `needs-verification`. Only human in-person findings establish `verified`. A reviewed direct staff statement that no public board exists can also establish `no-board`; identify that evidence basis and its date in the notes, omit `verified_date` for staff-only confirmation, and never fabricate an outcome or visit date. Keep `no-board` records in the data and duplicate checks, but exclude them from the generated README table. Check existing records and issues before planning another visit. Update the same record if a later human visit changes the outcome.
 
 ## Commands
 

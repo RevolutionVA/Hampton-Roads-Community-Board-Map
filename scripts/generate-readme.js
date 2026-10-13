@@ -76,7 +76,7 @@ function generateTable(locations) {
   markdown += '|------|------|---------|-----|-------|\n';
 
   for (const loc of locations) {
-    // Keep negative in-person findings in the data, but not in the posting directory.
+    // Keep reviewed no-board findings in the data, but not in the posting directory.
     if (loc.status === 'no-board') continue;
     const nameCell = loc.file ? `[${loc.name}](${loc.file})` : loc.name;
     const notesCell = formatNotesForReadme(loc.notes);
