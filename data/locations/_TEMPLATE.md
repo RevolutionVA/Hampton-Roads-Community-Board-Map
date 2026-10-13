@@ -6,8 +6,8 @@ city: Norfolk
 area: ghent
 category: other
 # Status: needs-verification (default), verified, or no-board.
-# Verified requires a human in-person finding. No-board may also use a
-# reviewed direct staff confirmation; state the method and date in the notes.
+# Verified and no-board require reviewed in-person or direct staff confirmation.
+# State the evidence method and confirmation date in the notes.
 status: needs-verification
 
 # Optional fields: omit unknown values rather than leaving them empty.

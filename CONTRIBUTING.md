@@ -30,11 +30,11 @@ Omit unknown optional fields rather than using empty strings or `null`.
 
 ## Verification outcomes
 
-- `needs-verification`: a candidate or researched lead awaiting an in-person check. Online research and positive staff email confirmation do not establish an in-person verified posting location.
-- `verified`: a person confirmed an available community posting location in person.
+- `needs-verification`: a candidate or researched lead awaiting reviewed confirmation. General online research alone does not establish an available posting location.
+- `verified`: an available community posting location confirmed through a reviewed in-person report or direct staff confirmation. State the evidence basis and confirmation date in the notes; staff confirmation does not imply an in-person visit.
 - `no-board`: no public community bulletin board exists at this location, confirmed either in person or directly by the location's staff. Retain the location file so contributors can avoid repeating the same visit or outreach; it is excluded from the README table. State the evidence basis explicitly in the notes.
 
-Verification is a human step. Automated issue intake always creates `status: needs-verification`, without `verified_date`, even if a submission includes a claimed status or date. A person must review an in-person report before setting `verified` and adding a known visit date. A reviewed direct staff confirmation may establish `no-board`, but it is not an in-person verification.
+Verification is a human step. Automated issue intake always creates `status: needs-verification`, without `verified_date`, even if a submission includes a claimed status or date. A person must review the report or direct staff confirmation before setting `verified` or `no-board`. Keep the evidence method and date explicit in the notes. `verified_date` remains reserved for an actual in-person visit; omit it for staff-only confirmation.
 
 For a no-board finding, update the existing record (or add one if the location only exists as an issue), describe the finding and whether it came from an in-person visit or direct staff confirmation in the notes, and link the report when available. Omit `board_type` when there is no board. For staff-only confirmation, record its date and method in the notes and omit `verified_date`; that field is reserved for an actual visit. For example, after an actual visit on the date shown:
 
@@ -43,4 +43,4 @@ status: no-board
 verified_date: 2026-08-25
 ```
 
-Keep the record rather than deleting it or creating a second entry. If a later in-person visit confirms a board is now available, update that same record to `verified`, record the new visit date when known, and explain the change in the notes. Do not infer a new outcome from silence, an old report, or general online research. A direct, current staff statement that there is no public board can support a reviewed `no-board` record; it must remain clearly distinguished from a visit.
+Keep the record rather than deleting it or creating a second entry. If a later reviewed in-person report or direct staff confirmation establishes that a board is now available, update that same record to `verified` and explain the change and evidence basis in the notes. Record `verified_date` only for a known actual visit. Do not infer a new outcome from silence, an old report, or general online research. A direct, current staff statement that there is no public board can support a reviewed `no-board` record; it must remain clearly distinguished from a visit.
